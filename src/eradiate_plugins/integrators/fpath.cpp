@@ -92,7 +92,7 @@ public:
 
     FPathIntegrator(const Properties &props) : Base(props) {
         // Minimum recorded value.
-        int min_depth = props.get<int>("min depth", 0);
+        int min_depth = props.get<int>("min_depth", 0);
         if (min_depth < 0 || min_depth > (int) m_max_depth)
             Throw("\"min_depth\" must be set to 0 or a value smaller than max depth");
         m_min_depth = (uint32_t) min_depth;
@@ -181,13 +181,15 @@ public:
                     ds.emitter->eval(si, prev_bsdf_pdf > 0.f) * mis_bsdf,
                     result);
             }
-
+            
             // Continue tracing the path at this point?
             Bool active_next = (depth + 1 < m_max_depth) && si.is_valid();
-
-            if (dr::none_or<false>(active_next))
+            
+            if (dr::none_or<false>(active_next)){
+                valid_ray |= active && si.is_valid();
                 break; // early exit for scalar mode
-
+            }
+            
             BSDFPtr bsdf = si.bsdf(ray);
 
             // ---------------------- Emitter sampling ----------------------
