@@ -569,6 +569,9 @@ public:
     /// Set a string identifier
     void set_id(const std::string& id) override { m_id = id; };
 
+    /// Flags for all components combined.
+    uint32_t filter(Mask /*active*/ = true) const { return m_filter; }
+
     /**
      * \brief Evaluate the diffuse reflectance
      *
@@ -621,6 +624,9 @@ protected:
 
     /// Identifier (if available)
     std::string m_id;
+
+    /// Filter type for this BSDF
+    uint32_t m_filter;
 };
 
 // -----------------------------------------------------------------------
@@ -680,6 +686,7 @@ DRJIT_VCALL_TEMPLATE_BEGIN(mitsuba::BSDF)
     DRJIT_VCALL_METHOD(eval_attribute_1)
     DRJIT_VCALL_METHOD(eval_attribute_3)
     DRJIT_VCALL_GETTER(flags, uint32_t)
+    DRJIT_VCALL_GETTER(filter, uint32_t)
     auto needs_differentials() const {
         return has_flag(flags(), mitsuba::BSDFFlags::NeedsDifferentials);
     }

@@ -104,6 +104,7 @@ public:
     }
 
     using BSDF::m_flags;
+    using BSDF::m_filter;
     using BSDF::m_components;
 };
 
@@ -174,6 +175,7 @@ template <typename Ptr, typename Cls> void bind_bsdf_generic(Cls &cls) {
             },
             "name"_a, "si"_a, "active"_a = true, D(BSDF, eval_attribute_3))
         .def("flags", [](Ptr bsdf) { return bsdf->flags(); }, D(BSDF, flags))
+        .def("filter", [](Ptr bsdf) { return bsdf->filter(); }, D(BSDF, filter))
         .def("needs_differentials",
              [](Ptr bsdf) { return bsdf->needs_differentials(); },
              D(BSDF, needs_differentials));
@@ -197,6 +199,13 @@ MI_PY_EXPORT(BSDF) {
             [](PyBSDF &bsdf, uint32_t flags){
                 bsdf.m_flags = flags;
                 dr::set_attr(&bsdf, "flags", flags);
+            }
+        )
+        .def_property("m_filter",
+            [](PyBSDF &bsdf){ return bsdf.m_filter; },
+            [](PyBSDF &bsdf, uint32_t filter){
+                bsdf.m_filter = filter;
+                dr::set_attr(&bsdf, "filter", filter);
             }
         )
         .def_readwrite("m_components", &PyBSDF::m_components)
