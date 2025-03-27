@@ -7,7 +7,11 @@
 NAMESPACE_BEGIN(mitsuba)
 
 MI_VARIANT BSDF<Float, Spectrum>::BSDF(const Properties &props)
-    : m_flags(+BSDFFlags::Empty), m_id(props.id()) { }
+    : m_flags(+BSDFFlags::Empty), m_id(props.id()) {
+        m_filter = props.get<uint32_t>("filter", 0);
+
+        dr::set_attr(this, "filter", m_filter);
+}
 
 MI_VARIANT BSDF<Float, Spectrum>::~BSDF() { }
 

@@ -5,6 +5,7 @@
 #include <mitsuba/render/emitter.h>
 #include <mitsuba/render/integrator.h>
 #include <mitsuba/render/records.h>
+#include <mitsuba/render/filter.h>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -173,7 +174,8 @@ public:
                 Float mis_bsdf = mis_weight(prev_bsdf_pdf, em_pdf);
 
                 // @FILTER ============================ 
-                Mask pass = filter(depth);
+                Mask pass = order_filter(depth);
+                pass &= bsdf_filter(si);
 
                 // Accumulate, being careful with polarization (see spec_fma)
                 result[pass] = spec_fma(
@@ -195,7 +197,8 @@ public:
             // ---------------------- Emitter sampling ----------------------
 
             // @FILTER ============================ 
-            Mask pass = filter(depth + 1);
+            Mask pass = order_filter(depth + 1);
+            pass &= bsdf_filter(si);
 
             // Perform emitter sampling?
             Mask active_em = active_next && has_flag(bsdf->flags(), BSDFFlags::Smooth) && pass;
@@ -335,12 +338,17 @@ public:
     /**
      * \brief accumulate the values that pass the filters
      */
-    Mask filter(const UInt32& depth) const {
-        
+    Mask order_filter(const UInt32& depth) const {
         // filtered value
         Mask pass = depth >= m_min_depth && depth < m_max_depth;
         return pass;
         
+    }
+
+    Mask bsdf_filter(const SurfaceInteraction3f& si) const {
+        BSDFPtr bsdf = si.bsdf();
+        Mask pass = dr::eq(bsdf->filter(), +FilterType::Include);
+        return pass;
     }
 
 protected:

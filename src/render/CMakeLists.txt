@@ -55,6 +55,7 @@ add_library(mitsuba-render OBJECT
   endpoint.cpp     ${INC_DIR}/endpoint.h
   film.cpp         ${INC_DIR}/film.h
                    ${INC_DIR}/fresnel.h
+                   ${INC_DIR}/filter.h
   imageblock.cpp   ${INC_DIR}/imageblock.h
   integrator.cpp   ${INC_DIR}/integrator.h
                    ${INC_DIR}/interaction.h

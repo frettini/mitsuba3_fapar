@@ -84,7 +84,7 @@ Alternatively, the reflectance can be textured:
 template <typename Float, typename Spectrum>
 class SmoothDiffuse final : public BSDF<Float, Spectrum> {
 public:
-    MI_IMPORT_BASE(BSDF, m_flags, m_components)
+    MI_IMPORT_BASE(BSDF, m_flags, m_components, m_filter)
     MI_IMPORT_TYPES(Texture)
 
     SmoothDiffuse(const Properties &props) : Base(props) {
@@ -193,6 +193,7 @@ public:
         std::ostringstream oss;
         oss << "SmoothDiffuse[" << std::endl
             << "  reflectance = " << string::indent(m_reflectance) << std::endl
+            << "  filter = " << string::indent(m_filter) << std::endl
             << "]";
         return oss.str();
     }
