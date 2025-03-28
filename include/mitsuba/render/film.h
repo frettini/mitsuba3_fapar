@@ -151,8 +151,14 @@ public:
     /// Ignoring the crop window, return the resolution of the underlying sensor
     const ScalarVector2u &size() const { return m_size; }
 
+    /// Ignoring the crop window, return the product of the resolution of the sensor
+    virtual const ScalarUInt32 size_product() const;
+
     /// Return the size of the crop window
     const ScalarVector2u &crop_size() const { return m_crop_size; }
+    
+    /// Return the product of the resolution of the crop window
+    virtual const ScalarUInt32 crop_size_product() const;
 
     /// Return the offset of the crop window
     const ScalarPoint2u &crop_offset() const { return m_crop_offset; }
