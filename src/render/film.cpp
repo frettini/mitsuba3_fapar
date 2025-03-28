@@ -83,6 +83,16 @@ Film<Float, Spectrum>::prepare_sample(const UnpolarizedSpectrum & /* spec */,
     NotImplementedError("prepare_sample");
 }
 
+MI_VARIANT const typename Film<Float, Spectrum>::ScalarUInt32
+Film<Float, Spectrum>::size_product() const {
+    return dr::prod(m_size);
+}
+
+MI_VARIANT const typename Film<Float, Spectrum>::ScalarUInt32
+Film<Float, Spectrum>::crop_size_product() const {
+    return dr::prod(m_crop_size);
+}
+
 MI_VARIANT const typename Film<Float, Spectrum>::Texture *
 Film<Float, Spectrum>::sensor_response_function() {
     return m_srf.get();
