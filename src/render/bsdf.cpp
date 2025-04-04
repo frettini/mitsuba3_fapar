@@ -43,6 +43,11 @@ MI_VARIANT Spectrum BSDF<Float, Spectrum>::eval_diffuse_reflectance(
     return eval(ctx, si, wo, active) * dr::Pi<Float>;
 }
 
+MI_VARIANT Spectrum BSDF<Float, Spectrum>::eval_hdrf(
+    const SurfaceInteraction3f &/* si */, Mask /* active */) const {
+    NotImplementedError("eval_hdrf");
+}
+
 template <typename Texture, typename Type>
 struct AttributeCallback : public TraversalCallback {
     using F1 = std::function<Type(Texture *)>;
