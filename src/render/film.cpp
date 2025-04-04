@@ -109,6 +109,10 @@ MI_VARIANT void Film<Float, Spectrum>::set_crop_window(const ScalarPoint2u &crop
     m_crop_offset = crop_offset;
 }
 
+MI_VARIANT void Film<Float, Spectrum>::write_tensor(const Float /*values*/, const UInt32 /*idx*/, Mask /*active*/) {
+    NotImplementedError("write_tensor");
+}
+
 MI_VARIANT void Film<Float, Spectrum>::set_size(const ScalarPoint2u &size) {
     m_size = size;
     // Reset the crop window to match the full sensor area
