@@ -120,6 +120,19 @@ Sensor<Float, Spectrum>::sample_wavelengths(const SurfaceInteraction3f& /*si*/, 
     return sample_wavelength<Float, Spectrum>(sample);
 }
 
+MI_VARIANT void
+Sensor<Float, Spectrum>::accumulate(
+    const Ray3f &/*ray*/,
+    const SurfaceInteraction3f &/*si*/,
+    Spectrum /*emitted*/,
+    Spectrum /*throughput*/,
+    ScalarFloat /*sample_scale*/,
+    Mask /*filter*/,
+    Mask /*active*/) {
+    
+    NotImplementedError("accumulate");
+}
+
 // =============================================================================
 // ProjectiveCamera interface
 // =============================================================================
