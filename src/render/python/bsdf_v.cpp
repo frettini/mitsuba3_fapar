@@ -65,6 +65,11 @@ public:
         PYBIND11_OVERRIDE(Spectrum, BSDF, eval_diffuse_reflectance, si, active);
     }
 
+    Spectrum eval_hdrf(const SurfaceInteraction3f &si,
+                                      Mask active) const override {
+        PYBIND11_OVERRIDE(Spectrum, BSDF, eval_hdrf, si, active);
+    }
+
     Spectrum eval_null_transmission(const SurfaceInteraction3f &si,
                                       Mask active) const override {
         PYBIND11_OVERRIDE(Spectrum, BSDF, eval_null_transmission, si, active);
@@ -141,7 +146,11 @@ template <typename Ptr, typename Cls> void bind_bsdf_generic(Cls &cls) {
              [](Ptr bsdf, const SurfaceInteraction3f &si, Mask active) {
                  return bsdf->eval_diffuse_reflectance(si, active);
              }, "si"_a, "active"_a = true, D(BSDF, eval_diffuse_reflectance))
-             .def("has_attribute",
+        .def("eval_hdrf",
+             [](Ptr bsdf, const SurfaceInteraction3f &si, Mask active) {
+                 return bsdf->eval_hdrf(si, active);
+             }, "si"_a, "active"_a = true, D(BSDF, eval_hdrf))
+        .def("has_attribute",
             [](Ptr bsdf, const std::string &name, const Mask &active) {
                 return bsdf->has_attribute(name, active);
             },

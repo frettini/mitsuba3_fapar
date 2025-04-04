@@ -184,6 +184,11 @@ public:
         return m_reflectance->eval(si, active);
     }
 
+    Spectrum eval_hdrf(const SurfaceInteraction3f &si,
+        Mask active) const override {
+        return m_reflectance->eval(si, active);
+    }
+
     std::string to_string() const override {
         std::ostringstream oss;
         oss << "SmoothDiffuse[" << std::endl
