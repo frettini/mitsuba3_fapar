@@ -75,6 +75,8 @@ public:
     /// Write the developed contents of the film to a file on disk
     virtual void write(const fs::path &path) const = 0;
 
+    virtual void write_tensor(const Float values, const UInt32 idx, Mask active);
+
     /// dr::schedule() variables that represent the internal film storage
     virtual void schedule_storage() = 0;
 
@@ -151,11 +153,17 @@ public:
     /// Ignoring the crop window, return the resolution of the underlying sensor
     const ScalarVector2u &size() const { return m_size; }
 
+    /// Ignoring the crop window, return the resolution of a given axis.
+    virtual const ScalarUInt32 &size(ScalarUInt32 idx) const { return m_size[idx]; }
+
     /// Ignoring the crop window, return the product of the resolution of the sensor
     virtual const ScalarUInt32 size_product() const;
 
     /// Return the size of the crop window
     const ScalarVector2u &crop_size() const { return m_crop_size; }
+
+    /// Return the size of the crop window on a given axis
+    virtual const ScalarUInt32 &crop_size(ScalarUInt32 idx) const { return m_size[idx]; }
     
     /// Return the product of the resolution of the crop window
     virtual const ScalarUInt32 crop_size_product() const;

@@ -91,6 +91,22 @@ public:
         return (size_t) m_n_channels;
     }
 
+    const ScalarUInt32 &size(ScalarUInt32 idx) const override {
+        return m_res[idx];
+    }
+
+    const ScalarUInt32 size_product() const override {
+        return m_res.x() * m_res.y() * m_res.z();
+    }
+
+    const ScalarUInt32 &crop_size(ScalarUInt32 idx) const override {
+        return m_res[idx];
+    }
+    
+    const ScalarUInt32 crop_size_product() const override {
+        return m_res.x() * m_res.y() * m_res.z();
+    }
+
     size_t prepare(const std::vector<std::string> &/*aovs*/) override {
         return (size_t) m_n_channels;
     }
@@ -106,6 +122,7 @@ public:
 
     void clear() override {
         using FloatX = DynamicBuffer<ScalarFloat>;
+        Log(Debug,"clear buffer");
         size_t data_size = (size_t) m_res.z() * (size_t) m_res.y() * (size_t) m_res.x() * (size_t) m_n_channels;
         FloatX zeros = dr::zeros<FloatX>(data_size);
         m_n_channels = 1;
@@ -130,8 +147,14 @@ public:
         NotImplementedError("write");
     }
 
-    void write(const Float values, const UInt32 idx, Mask active) {
-        dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
+    void write_tensor(const Float values, const UInt32 idx, Mask active) override {
+        if constexpr (!dr::is_jit_v<Float>){
+            std::lock_guard<std::mutex> lock(m_mutex);
+            Log(Debug,"accumulate val: %f, at idx : %d", values, idx);
+            dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
+        } else {
+            dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
+        }
     }
 
     void schedule_storage() override {
@@ -152,6 +175,7 @@ protected:
     ScalarVector3u m_res;
     TensorXf m_data;
     ScalarUInt32 m_n_channels;
+    std::mutex m_mutex;
 };
 
 MI_IMPLEMENT_CLASS_VARIANT(VolFilm, Film)
