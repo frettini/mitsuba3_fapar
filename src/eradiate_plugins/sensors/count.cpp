@@ -11,8 +11,6 @@
 
 NAMESPACE_BEGIN(mitsuba)
 
-enum class RayTargetType { Shape, Point, None };
-
 /**!
 
 .. _plugin-sensor-count:
@@ -101,7 +99,7 @@ public:
         Mask active = true
     ) override {
            
-        // for now assume that we have only a [1,1,1,1] tensor.
+        // Calculate index of current voxel from the interaction point
         Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
         Mask is_inside_grid = dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
         Float current_voxel_flat = current_voxel.x() 
