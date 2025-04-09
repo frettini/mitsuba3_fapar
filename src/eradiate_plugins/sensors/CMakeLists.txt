@@ -6,5 +6,6 @@ add_plugin(distantflux distantflux.cpp)
 add_plugin(mdistant mdistant.cpp)
 add_plugin(mpdistant mpdistant.cpp)
 add_plugin(count count.cpp)
+add_plugin(absorbedflux absorbedflux.cpp)
 
 set(MI_PLUGIN_TARGETS "${MI_PLUGIN_TARGETS}" PARENT_SCOPE)
