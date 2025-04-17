@@ -137,8 +137,10 @@ public:
 
         uint32_t n_passes = spp / spp_per_pass;
 
-        size_t samples_per_pass =
-            (size_t) film_size_prod * (size_t) spp_per_pass;
+        
+        size_t samples_per_pass = m_film_scale 
+                                ? (size_t) film_size_prod * (size_t) spp_per_pass 
+                                : (size_t) spp_per_pass;
 
         std::vector<std::string> aovs = aov_names();
         if (!aovs.empty())
@@ -158,8 +160,9 @@ public:
             return result;
         }
 
-        ScalarFloat sample_scale =
-            crop_size_prod / ScalarFloat(spp * film_size_prod);
+        ScalarFloat sample_scale = m_film_scale 
+                                ? crop_size_prod / ScalarFloat(spp * film_size_prod)
+                                : 1 / ScalarFloat(spp);
 
         TensorXf result;
         if constexpr (!dr::is_jit_v<Float>) {
@@ -302,6 +305,8 @@ public:
     VolumeIntegrator(const Properties &props) : Base(props) {
 
         m_samples_per_pass = props.get<uint32_t>("samples_per_pass", (uint32_t) -1);
+
+        m_film_scale = props.get<bool>("film_scale", true);
     
         m_rr_depth = props.get<int>("rr_depth", 5);
         if (m_rr_depth <= 0)
@@ -333,6 +338,8 @@ public:
 
     /// Depth to begin using russian roulette
     int m_rr_depth;
+
+    bool m_film_scale;
 
     MI_DECLARE_CLASS()
 
