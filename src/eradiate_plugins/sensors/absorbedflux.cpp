@@ -91,7 +91,7 @@ public:
     ScalarBoundingBox3f bbox() const override { return ScalarBoundingBox3f(); }
 
     void accumulate(
-        const Ray3f &ray,
+        const Ray3f &/*ray*/,
         const SurfaceInteraction3f &si,
         Spectrum emitted,
         Spectrum throughput,
@@ -100,27 +100,31 @@ public:
         Mask active = true
     ) override {
            
-        // Calculate index of current voxel from the interaction point
-        Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
-        Mask is_inside_grid = dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
-        Float current_voxel_flat = current_voxel.x() 
-                                  + current_voxel.y() * m_grid_res.x() 
-                                  + current_voxel.z() * m_grid_res.x() * m_grid_res.y();
+        Mask accumulate = active && filter && si.is_valid();
+    
+        if (dr::any_or<true>(accumulate)) {
+            // Calculate index of current voxel from the interaction point
+            Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
+            accumulate &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
+            Float current_voxel_flat = current_voxel.x() 
+                                    + current_voxel.y() * m_grid_res.x() 
+                                    + current_voxel.z() * m_grid_res.x() * m_grid_res.y();
 
-        // Calculate absorption at intersection point
-        BSDFPtr bsdf = si.bsdf();
-        Spectrum absorption = 1.0f - bsdf->eval_hdrf(si, active);
-        Log(Debug, "emitted: %f, throughput: %f, absorption: %f, si.wi: %f", 
-            dr::max(unpolarized_spectrum(emitted)), 
-            dr::max(unpolarized_spectrum(throughput)), 
-            dr::max(unpolarized_spectrum(absorption)),
-            Frame3f::cos_theta(si.wi));
-        // Calculated the resulting absorbed flux
-        Spectrum result = emitted * throughput * absorption * Frame3f::cos_theta(si.wi);
+            // Calculate absorption at intersection point
+            BSDFPtr bsdf = si.bsdf();
+            Spectrum absorption = 1.0f - bsdf->eval_hdrf(si, active);
+            Log(Debug, "emitted: %f, throughput: %f, absorption: %f, si.wi: %f", 
+                dr::max(unpolarized_spectrum(emitted)), 
+                dr::max(unpolarized_spectrum(throughput)), 
+                dr::max(unpolarized_spectrum(absorption)),
+                Frame3f::cos_theta(si.wi));
+            // Calculated the resulting absorbed flux
+            Spectrum result = emitted * throughput * absorption * Frame3f::cos_theta(si.wi);
 
-        result *= m_apply_sample_scale ? sample_scale : Float(1.f); 
-        if constexpr (!is_polarized_v<Spectrum>){
-            m_film->write_tensor(result[0], current_voxel_flat, is_inside_grid && active && filter);
+            result *= m_apply_sample_scale ? sample_scale : Float(1.f); 
+            if constexpr (!is_polarized_v<Spectrum>){
+                m_film->write_tensor(result[0], current_voxel_flat, accumulate);
+            }
         }
     };
 
