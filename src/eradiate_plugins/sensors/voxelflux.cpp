@@ -86,7 +86,7 @@ public:
         for(ScalarUInt32 i = 1; i < 4; ++i) {
             m_grid_res[i-1] = m_film->size(i)-1;
         } 
-        m_voxel_size = m_bbox.extents() / m_grid_res;
+        m_voxel_size = m_bbox.extents() / ScalarVector3f(m_grid_res);
 
         Log(Debug, "bbox.extent: %f, m_grid_res: %f, m_voxel_size: %f", m_bbox.extents(), m_grid_res, m_voxel_size);
     }
@@ -131,7 +131,7 @@ public:
         Vector3i  end_voxel = dr::clamp(((grid_end - m_bbox.min) / m_voxel_size), 0, m_grid_res - 1);
 
         // Distance along th ray to the next voxel boundary
-        Vector3i next_voxel_pos = m_bbox.min + (start_voxel + step_dir) * m_voxel_size;
+        Vector3f next_voxel_pos = m_bbox.min + (start_voxel + step_dir) * m_voxel_size;
 
         // If the ray has negative directions, we need to hit the left of the current
         // voxel, not the next one /!\ This is slightly different than the reference
@@ -161,7 +161,9 @@ public:
 
         Log(Debug, "ray.o: %d, ray.d: %d", ray.o, ray.d);
         Log(Debug, "t_end: %f, t_start: %f, remaining_dist: %f, maxt: %f", t_end, t_start, remaining_dist, maxt);
-        Log(Debug, "stride_y: %f, stride_z: %f, stride_f: %f", stride_y, stride_z, stride_f);
+        Log(Debug, "start_voxel: %f, end_voxel: %f", start_voxel, end_voxel);
+        Log(Debug, "grid_start: %f, next_voxel_pos: %f, is_valid_dir: %f", grid_start, next_voxel_pos, is_valid_dir);
+        Log(Debug, "stride_f: %f, stride_x: %f, stride_y: %f, stride_z: %f,", stride_f, stride_x, stride_y, stride_z );
 
         Spectrum flux = emitted * throughput;
         flux *= m_apply_sample_scale ? sample_scale : Spectrum(1.f); 
@@ -173,14 +175,15 @@ public:
         while (loop(dr::detach(active))) {
 
             Float dt = dr::minimum(dr::min(dtmax), remaining_dist);
+            Log(Debug, "dtmax.z: %0.10d, dt: %0.10d, remaining_dist: %0.10d", dtmax.z(), dt, remaining_dist);
+            Log(Debug, "dtmax.x: %0.10d, dtmax.x: %0.10d, dtmax.x: %0.10d", dtmax.x(),dtmax.y(),dtmax.z());
             dr::masked(remaining_dist, active) -= dt;
             
             // Check if we are at the end of the ray
             dr::masked(t, active) += dt;
             active &= (maxt - t) > 1e-6;
 
-            auto mask = dr::eq(dtmax, dt);
-            Log(Debug, "dtmax: %d, dt: %d", dtmax, dt);
+            auto mask = dr::abs(dtmax - dt) <= 1e-7;
 
             // Retrieve the face and direction indices used to access the film
             UInt32 f = dr::sum(dr::select(mask, face_index, 0));
