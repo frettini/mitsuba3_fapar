@@ -308,13 +308,17 @@ public:
 
         m_film_scale = props.get<bool>("film_scale", true);
     
-        m_rr_depth = props.get<int>("rr_depth", 5);
-        if (m_rr_depth <= 0)
+        int rr_depth = props.get<int>("rr_depth", 5);
+        if (rr_depth <= 0)
             Throw("\"rr_depth\" must be set to a value greater than zero!");
-    
-        m_max_depth = props.get<int>("max_depth", -1);
-        if (m_max_depth < 0 && m_max_depth != -1)
+        
+        m_rr_depth = (uint32_t) rr_depth;
+
+        int max_depth = props.get<int>("max_depth", -1);
+        if (max_depth < 0 && max_depth != -1)
             Throw("\"max_depth\" must be set to -1 (infinite) or a value >= 0");
+        
+        m_max_depth = (uint32_t) max_depth;
     };
 
     /// Virtual destructor
@@ -334,10 +338,10 @@ public:
     * A value of \c 1 will visualize only directly visible light sources.
     * \c 2 will lead to single-bounce (direct-only) illumination, and so on.
     */
-    int m_max_depth;
+    uint32_t m_max_depth;
 
     /// Depth to begin using russian roulette
-    int m_rr_depth;
+    uint32_t m_rr_depth;
 
     bool m_film_scale;
 
@@ -492,19 +496,16 @@ public:
         // @PONDER: The depth starts at one here because it technically doesn't 
         // account for emitters that are directly visible. Might need to set it 
         // to 0 because we are doing something fundamentally different?
+        
 
         // Tracks radiance scaling due to index of refraction changes
         Float eta(1.f);
-
-        Int32 depth = 0;
+        UInt32 depth = 0;
 
         Log(Debug, "trace_light_ray");
         /* ---------------------- Path construction ------------------------- */
         // First intersection from the emitter to the scene
-        SurfaceInteraction3f si = scene->ray_intersect(ray, active);
-        Log(Debug, "si.is_valid : %d", si.is_valid());
 
-        active &= si.is_valid();
         if (m_max_depth >= 0)
             active &= depth < m_max_depth;
 
@@ -512,18 +513,18 @@ public:
            generates wavefront or megakernel renderer based on configuration).
            Register everything that changes as part of the loop here */
         dr::Loop<Mask> loop("Particle Tracer Integrator", active, depth, ray,
-                            throughput, si, eta, sampler);
+                            throughput, eta, sampler);
+
+        loop.set_max_iterations(m_max_depth);
         
         // Incrementally build light path using BSDF sampling.
         while (loop(active)) {
-            BSDFPtr bsdf = si.bsdf(ray);
-            /* Connect to sensor and splat if successful. Sample a direction
-               from the sensor to the current surface point. */
-            // auto [sensor_ds, sensor_weight] =
-            //     sensor->sample_direction(si, sampler->next_2d(), active);
-            // connect_sensor(scene, si, sensor_ds, bsdf,
-            //                throughput * sensor_weight, sample_scale,
-            //                active);
+
+            SurfaceInteraction3f si = 
+                scene->ray_intersect(ray, 
+                                    /* ray_flags = */ +RayFlags::All, 
+                                    /* coherent = */ dr::eq(depth, 0u),
+                                    active);
 
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
@@ -535,7 +536,14 @@ public:
                 /*filter=*/Mask(true), 
                 /*active=*/active);
 
+            Mask active_next = (depth + 1 < m_max_depth) && si.is_valid();
+
+            if (dr::none_or<false>(active_next))
+                break; // early exit for scalar mode
+                
             /* ----------------------- BSDF sampling ------------------------ */
+            BSDFPtr bsdf = si.bsdf(ray);
+
             // Sample BSDF * cos(theta).
             BSDFContext ctx(TransportMode::Importance);
             auto [bs, bsdf_val] =
@@ -553,21 +561,17 @@ public:
             // Adjoint BSDF for shading normals -- [Veach, p. 155]
             Float correction = dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
                                        (Frame3f::cos_theta(bs.wo) * wi_dot_geo_n));
+
+            // ------ Update loop variables based on current interaction ------
             throughput *= bsdf_val * correction;
             eta *= bs.eta;
 
-            active &= dr::any(dr::neq(unpolarized_spectrum(throughput), 0.f));
-            if (dr::none_or<false>(active))
-                break;
-
-            // Intersect the BSDF ray against scene geometry (next vertex).
+            // Spawn ray for next iteration
             ray = si.spawn_ray(si.to_world(bs.wo));
-            si = scene->ray_intersect(ray, active);
-
-            depth++;
-            if (m_max_depth >= 0)
-                active &= depth < m_max_depth;
-            active &= si.is_valid();
+            
+            // -------------------- Stopping criterion ---------------------
+            
+            dr::masked(depth, si.is_valid()) += 1;
 
             // Russian Roulette
             Mask use_rr = depth > m_rr_depth;
@@ -577,6 +581,9 @@ public:
                 dr::masked(active, use_rr) &= sampler->next_1d(active) < q;
                 dr::masked(throughput, use_rr) *= dr::rcp(q);
             }
+
+            active &= active_next && dr::any(dr::neq(unpolarized_spectrum(throughput), 0.f));
+
         }
 
         return { throughput, 1.f };

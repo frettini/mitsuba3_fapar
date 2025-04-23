@@ -90,24 +90,29 @@ public:
     ScalarBoundingBox3f bbox() const override { return ScalarBoundingBox3f(); }
 
     void accumulate(
-        const Ray3f &ray,
+        const Ray3f &/*ray*/,
         const SurfaceInteraction3f &si,
-        Spectrum emitted,
-        Spectrum throughput,
+        Spectrum /*emitted*/,
+        Spectrum /*throughput*/,
         ScalarFloat sample_scale,
         Mask filter = true,
         Mask active = true
     ) override {
-           
-        // Calculate index of current voxel from the interaction point
-        Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
-        Mask is_inside_grid = dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
-        Float current_voxel_flat = current_voxel.x() 
-                                  + current_voxel.y() * m_grid_res.x() 
-                                  + current_voxel.z() * m_grid_res.x() * m_grid_res.y();
+        
+        Mask accumulate = active && filter && si.is_valid();
 
-        Float result = m_apply_sample_scale ? Float(1.f)*sample_scale : Float(1.f); 
-        m_film->write_tensor(result, current_voxel_flat, is_inside_grid && active && filter);
+        if (dr::any_or<true>(accumulate)) {
+            
+            // Calculate index of current voxel from the interaction point
+            Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
+            accumulate &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
+            Float current_voxel_flat = current_voxel.x() 
+            + current_voxel.y() * m_grid_res.x() 
+            + current_voxel.z() * m_grid_res.x() * m_grid_res.y();
+            
+            Float result = m_apply_sample_scale ? Float(1.f)*sample_scale : Float(1.f); 
+            m_film->write_tensor(result, current_voxel_flat, accumulate);
+        }
     };
 
     std::string to_string() const override {
