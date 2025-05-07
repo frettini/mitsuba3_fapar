@@ -6,6 +6,7 @@
 #include <mitsuba/render/emitter.h>
 #include <mitsuba/render/records.h>
 #include <mitsuba/render/sampler.h>
+#include <mitsuba/render/filter.h>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -319,6 +320,12 @@ public:
             Throw("\"max_depth\" must be set to -1 (infinite) or a value >= 0");
         
         m_max_depth = (uint32_t) max_depth;
+
+        // Minimum recorded value.
+        int min_depth = props.get<int>("min_depth", 0);
+        if (min_depth < 0 || min_depth > (int) m_max_depth)
+            Throw("\"min_depth\" must be set to 0 or a value smaller than max depth");
+        m_min_depth = (uint32_t) min_depth;
     };
 
     /// Virtual destructor
@@ -332,6 +339,8 @@ public:
     * If set to (size_t) -1, all the work is done in a single pass (default).
     */
     uint32_t m_samples_per_pass;
+
+    uint32_t m_min_depth;
 
     /**
     * Longest visualized path depth (\c -1 = infinite).
@@ -355,7 +364,7 @@ template <typename Float, typename Spectrum>
 class ParticleAccumulatorIntegrator final : public VolumeIntegrator<Float, Spectrum> {
 public:
     MI_IMPORT_BASE(VolumeIntegrator, m_samples_per_pass, m_hide_emitters,
-                    m_rr_depth, m_max_depth)
+                    m_rr_depth, m_min_depth, m_max_depth)
     MI_IMPORT_TYPES(Scene, Sensor, Film, Sampler, ImageBlock, Emitter,
                      EmitterPtr, BSDF, BSDFPtr)
 
@@ -371,84 +380,6 @@ public:
         trace_light_ray(ray, scene, sensor, sampler, throughput,
                         sample_scale, active);
     }
-
-    /**
-     * Samples an emitter in the scene and connects it directly to the sensor,
-     * splatting the emitted radiance to the given image block.
-     */
-    // void sample_visible_emitters(const Scene *scene, const Sensor *sensor,
-    //                              Sampler *sampler, ScalarFloat sample_scale) const {
-    //     // 1. Time sampling
-    //     Float time = sensor->shutter_open();
-    //     if (sensor->shutter_open_time() > 0)
-    //         time += sampler->next_1d() * sensor->shutter_open_time();
-
-    //     // 2. Emitter sampling (select one emitter)
-    //     auto [emitter_idx, emitter_idx_weight, _] =
-    //         scene->sample_emitter(sampler->next_1d());
-
-    //     EmitterPtr emitter =
-    //         dr::gather<EmitterPtr>(scene->emitters_dr(), emitter_idx);
-
-    //     // Don't connect delta emitters with sensor (both position and direction)
-    //     Mask active = !has_flag(emitter->flags(), EmitterFlags::Delta);
-
-    //     // 3. Emitter position sampling
-    //     Spectrum emitter_weight = dr::zeros<Spectrum>();
-    //     SurfaceInteraction3f si = dr::zeros<SurfaceInteraction3f>();
-
-    //     // 3.a. Infinite emitters
-    //     Mask is_infinite = has_flag(emitter->flags(), EmitterFlags::Infinite),
-    //          active_e = active && is_infinite;
-    //     if (dr::any_or<true>(active_e)) {
-    //         /* Sample a direction toward an envmap emitter starting
-    //            from the center of the scene (the sensor is not part of the
-    //            scene's bounding box, which could otherwise cause issues.) */
-    //         Interaction3f ref_it(0.f, time, dr::zeros<Wavelength>(),
-    //                              sensor->world_transform().translation());
-
-    //         auto [ds, dir_weight] = emitter->sample_direction(
-    //             ref_it, sampler->next_2d(active), active_e);
-
-    //         /* Note: `dir_weight` already includes the emitter radiance, but
-    //            that will be accounted for again when sampling the wavelength
-    //            below. Instead, we recompute just the factor due to the PDF.
-    //            Also, convert to area measure. */
-    //         emitter_weight[active_e] =
-    //             dr::select(ds.pdf > 0.f, dr::rcp(ds.pdf), 0.f) *
-    //             dr::sqr(ds.dist);
-
-    //         si[active_e] = SurfaceInteraction3f(ds, ref_it.wavelengths);
-    //     }
-
-    //     // 3.b. Finite emitters
-    //     active_e = active && !is_infinite;
-    //     if (dr::any_or<true>(active_e)) {
-    //         auto [ps, pos_weight] =
-    //             emitter->sample_position(time, sampler->next_2d(active), active_e);
-
-    //         emitter_weight[active_e] = pos_weight;
-    //         si[active_e] = SurfaceInteraction3f(ps, dr::zeros<Wavelength>());
-    //     }
-
-    //     /* 4. Connect to the sensor.
-    //        Query sensor for a direction connecting to `si.p`, which also
-    //        produces UVs on the sensor (for splatting). The resulting direction
-    //        points from si.p (on the emitter) toward the sensor. */
-    //     auto [sensor_ds, sensor_weight] = sensor->sample_direction(si, sampler->next_2d(), active);
-    //     si.wi = sensor_ds.d;
-
-    //     // 5. Sample spectrum of the emitter (accounts for its radiance)
-    //     auto [wavelengths, wav_weight] =
-    //         emitter->sample_wavelengths(si, sampler->next_1d(active), active);
-    //     si.wavelengths = wavelengths;
-    //     si.shape       = emitter->shape();
-
-    //     // Spectrum weight = emitter_idx_weight * emitter_weight * wav_weight * sensor_weight;
-
-    //     // // No BSDF passed (should not evaluate it since there's no scattering)
-    //     // connect_sensor(scene, si, sensor_ds, nullptr, weight, block, sample_scale, active);
-    // }
 
     /// Samples a ray from a random emitter in the scene.
     std::pair<Ray3f, Spectrum> prepare_ray(const Scene *scene,
@@ -525,6 +456,10 @@ public:
                                     /* ray_flags = */ +RayFlags::All, 
                                     /* coherent = */ dr::eq(depth, 0u),
                                     active);
+            
+            // @FILTER ============================ 
+            Mask pass = order_filter(depth);
+            pass &= bsdf_filter(si);
 
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
@@ -533,7 +468,7 @@ public:
                 /*emitted=*/throughput, 
                 /*throughput=*/Spectrum(1.f), 
                 /*sample_scale=*/sample_scale,
-                /*filter=*/Mask(true), 
+                /*filter=*/pass, 
                 /*active=*/active);
 
             Mask active_next = (depth + 1 < m_max_depth) && si.is_valid();
@@ -590,98 +525,30 @@ public:
     }
 
     /**
-     * Attempt connecting the given point to the sensor.
-     *
-     * If the point to connect is on the surface (non-null `bsdf` values),
-     * evaluate the BSDF in the direction of the sensor.
-     *
-     * Finally, splat `weight` (with all appropriate factors) to the
-     * given image block.
-     *
-     * \return The quantity that was accumulated to the block.
+     * \brief accumulate the values that pass the filters
      */
-    // Spectrum connect_sensor(const Scene *scene,
-    //                         const SurfaceInteraction3f &si,
-    //                         const DirectionSample3f &sensor_ds,
-    //                         const BSDFPtr &bsdf, const Spectrum &weight,
-    //                         ImageBlock *block, ScalarFloat sample_scale,
-    //                         Mask active) const {
-    //     active &= (sensor_ds.pdf > 0.f) &&
-    //               dr::any(dr::neq(unpolarized_spectrum(weight), 0.f));
-    //     if (dr::none_or<false>(active))
-    //         return 0.f;
-
-    //     // Check that sensor is visible from current position (shadow ray).
-    //     Ray3f sensor_ray = si.spawn_ray_to(sensor_ds.p);
-    //     active &= !scene->ray_test(sensor_ray, active);
-    //     if (dr::none_or<false>(active))
-    //         return 0.f;
-
-    //     // Foreshortening term and BSDF value for that direction (for surface interactions).
-    //     Spectrum result = 0.f;
-    //     Spectrum surface_weight = 1.f;
-    //     Vector3f local_d        = si.to_local(sensor_ray.d);
-    //     Mask on_surface         = active && dr::neq(si.shape, nullptr);
-    //     if (dr::any_or<true>(on_surface)) {
-    //         /* Note that foreshortening is only missing for directly visible
-    //            emitters associated with a shape. Otherwise it's included in the
-    //            BSDF. Clamp negative cosines (zero value if behind the surface). */
-
-    //         surface_weight[on_surface && dr::eq(bsdf, nullptr)] *=
-    //             dr::maximum(0.f, Frame3f::cos_theta(local_d));
-
-    //         on_surface &= dr::neq(bsdf, nullptr);
-    //         if (dr::any_or<true>(on_surface)) {
-    //             BSDFContext ctx(TransportMode::Importance);
-    //             // Using geometric normals
-    //             Float wi_dot_geo_n = dr::dot(si.n, si.to_world(si.wi)),
-    //                   wo_dot_geo_n = dr::dot(si.n, sensor_ray.d);
-
-    //             // Prevent light leaks due to shading normals
-    //             Mask valid = (wi_dot_geo_n * Frame3f::cos_theta(si.wi) > 0.f) &&
-    //                          (wo_dot_geo_n * Frame3f::cos_theta(local_d) > 0.f);
-
-    //             // Adjoint BSDF for shading normals -- [Veach, p. 155]
-    //             Float correction = dr::select(valid,
-    //                 dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
-    //                         (Frame3f::cos_theta(local_d) * wi_dot_geo_n)), 0.f);
-
-    //             surface_weight[on_surface] *=
-    //                 correction * bsdf->eval(ctx, si, local_d, on_surface);
-    //         }
-    //     }
-
-    //     /* Even if the ray is not coming from a surface (no foreshortening),
-    //        we still don't want light coming from behind the emitter. */
-    //     Mask not_on_surface = active && dr::eq(si.shape, nullptr) && dr::eq(bsdf, nullptr);
-    //     if (dr::any_or<true>(not_on_surface)) {
-    //         Mask invalid_side = Frame3f::cos_theta(local_d) <= 0.f;
-    //         surface_weight[not_on_surface && invalid_side] = 0.f;
-    //     }
-
-    //     result = weight * surface_weight * sample_scale;
-
+    Mask order_filter(const UInt32& depth) const {
+        // filtered value
+        Mask pass = depth >= m_min_depth && depth < m_max_depth;
+        return pass;
         
-    //     /* Splatting, adjusting UVs for sensor's crop window if needed.
-    //        The crop window is already accounted for in the UV positions
-    //        returned by the sensor, here we just need to compensate for
-    //        the block's offset that will be applied in `put`. */
-    //     Float alpha = dr::select(dr::neq(bsdf, nullptr), 1.f, 0.f);
-    //     Vector2f adjusted_position = sensor_ds.uv + block->offset();
+    }
 
-    //     /* Splat RGB value onto the image buffer. The particle tracer
-    //        does not use the weight channel at all */
-    //     block->put(adjusted_position, si.wavelengths, result, alpha,
-    //                /* weight = */ 0.f, active);
-
-    //     return result;
-    // }
+    Mask bsdf_filter(const SurfaceInteraction3f& si) const {
+        Mask pass(true);
+        if (dr::none_or<false>(si.is_valid()))
+            return pass;
+        BSDFPtr bsdf = si.bsdf();
+        pass = dr::eq(bsdf->filter(), +FilterType::Include);
+        return pass;
+    }
 
     //! @}
     // =============================================================
 
     std::string to_string() const override {
         return tfm::format("ParticleAccumulatorIntegrator[\n"
+                           "  min_depth = %u,\n"
                            "  max_depth = %i,\n"
                            "  rr_depth = %i\n"
                            "]",
