@@ -175,8 +175,8 @@ public:
         while (loop(dr::detach(active))) {
 
             Float dt = dr::minimum(dr::min(dtmax), remaining_dist);
-            Log(Debug, "dtmax.z: %0.10d, dt: %0.10d, remaining_dist: %0.10d", dtmax.z(), dt, remaining_dist);
-            Log(Debug, "dtmax.x: %0.10d, dtmax.x: %0.10d, dtmax.x: %0.10d", dtmax.x(),dtmax.y(),dtmax.z());
+            Log(Debug, "dt: %0.10d, remaining_dist: %0.10d", dtmax.z(), dt, remaining_dist);
+            Log(Debug, "dtmax.x: %0.10d, dtmax.y: %0.10d, dtmax.z: %0.10d", dtmax.x(),dtmax.y(),dtmax.z());
             dr::masked(remaining_dist, active) -= dt;
             
             // Check if we are at the end of the ray
