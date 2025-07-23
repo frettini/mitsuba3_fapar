@@ -183,7 +183,7 @@ public:
             dr::masked(t, active) += dt;
             active &= (maxt - t) > 1e-6;
 
-            auto mask = dr::abs(dtmax - dt) <= 1e-7;
+            auto mask = dr::abs(dtmax - dt) <= 1e-6;
 
             // Retrieve the face and direction indices used to access the film
             UInt32 f = dr::sum(dr::select(mask, face_index, 0));
@@ -202,6 +202,9 @@ public:
             Log(Debug, "flat_idx: %f", current_voxel_flat);
             // ====== Write to film ======
             if constexpr (!is_polarized_v<Spectrum>){
+                Float cos_theta = dr::sum(dr::select(mask, dr::abs(ray.d), 0));
+                Log(Debug, "flux: %f, cos_theta : %f", flux, cos_theta);
+                // m_film->write_tensor(flux[0] * cos_theta, current_voxel_flat, active && filter);
                 m_film->write_tensor(flux[0], current_voxel_flat, active && filter);
             }
             // ===========================
