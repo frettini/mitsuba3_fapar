@@ -483,37 +483,24 @@ public:
             Float t = si.t;
 
             /* ------------------- Periodic Bound Part 1 -------------------- */
-            Vector3f wrapped_ray_origin = dr::zeros<Vector3f>();
+            // Check intersection with bounding box and update surface interaction 
+
+            Vector3f pbox_si = dr::zeros<Vector3f>();
             if(dr::any_or<true>(pbounds_valid)){
                 auto [no_intersect, tmin, tmax] = m_pbox.ray_intersect(ray);
-                Vector3f pbox_si = ray(tmax) + ray.d * math::RayEpsilon<Float>;
+                dr::masked(pbox_si, no_intersect) = ray(tmax) + ray.d * math::RayEpsilon<Float>;
 
                 // Escaped boundary if intersection with it is smaller than surface intersection.
                 escaped_pbound = pbounds_valid &&  tmax < si.t;
-                // Mark any rays that exist pbounds by the top or bottom as inactive.
-                active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
-                // add safeguards in case we get stuck in an infinite loop
-                periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
-                active &= periodic_count < max_periodic_iterations;
 
                 // invalidate si, and set next t to the pbox intersection distance
                 // NOTE: might need to increment t accordingly for volumetric interactions?
                 dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
                 dr::masked(t, escaped_pbound) = tmax;
 
+
                 Log(Debug, "pbox_si.x: %.6f, pbox_si.y: %.6f, pbox_si.z: %.6f", pbox_si.x(), pbox_si.y(), pbox_si.z());
                 Log(Debug, "tmin: %f, tmax: %f, no_intersect: %d, si.t: %f", tmin, tmax, no_intersect, si.t);
-                
-                // Log(Debug, "ray.d*eps: %f", ray.d*math::RayEpsilon<Float>);
-
-                // apply modulo of the offset on the ray origin
-                Vector3f offset = pbox_si - m_pbox.min;
-                Vector3f wrapped_offset = offset - dr::floor(offset / pbound_extent) * pbound_extent;
-                wrapped_ray_origin = wrapped_offset + m_pbox.min;
-                
-
-                Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
-                Log(Debug, "ray: %d", ray.o);
             }
 
             /* ------------------------- Accumulate ------------------------- */
@@ -539,7 +526,23 @@ public:
             Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d", escaped_pbound, active_surface, active);
 
             /* ------------------- Periodic Bound Part 2 -------------------- */
-            dr::masked(ray.o, escaped_pbound) = wrapped_ray_origin;
+            // Update ray and active mask 
+
+            if(dr::any_or<true>(escaped_pbound)){
+                // Mark any rays that exist pbounds by the top or bottom as inactive.
+                active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
+                // add safeguards in case we get stuck in an infinite loop
+                periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
+                active &= periodic_count < max_periodic_iterations;
+
+                // apply modulo of the offset on the ray origin
+                Vector3f offset = pbox_si - m_pbox.min;
+                Vector3f wrapped_offset = offset - dr::floor(offset / pbound_extent) * pbound_extent;
+                dr::masked(ray.o, escaped_pbound) = wrapped_offset + m_pbox.min;
+                
+                Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
+                Log(Debug, "ray: %d", ray.o);
+            }
 
             if (dr::any_or<false>(escaped_pbound)) {
                 Log(Debug, "continue to next");
