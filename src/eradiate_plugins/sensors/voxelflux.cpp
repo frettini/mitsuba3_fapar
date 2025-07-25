@@ -97,7 +97,8 @@ public:
 
     void accumulate(
         const Ray3f &ray,
-        const SurfaceInteraction3f &si,
+        const SurfaceInteraction3f &/*si*/,
+        Float tmax,
         Spectrum emitted,
         Spectrum throughput,
         ScalarFloat sample_scale,
@@ -105,6 +106,7 @@ public:
         Mask active = true
     ) override {
            
+        Log(Debug, "ACCUMULATE");
         // Find intersection with the bounding box of the volume grid
         Vector3f t_bmin = (m_bbox.min - ray.o) / ray.d;
         Vector3f t_bmax = (m_bbox.max - ray.o) / ray.d;
@@ -113,7 +115,7 @@ public:
         Float maxt_box = dr::min(dr::maximum(t_bmin, t_bmax));
 
         // Offset the start distance so that it we can account the first voxel face.
-        Float maxt = si.t;
+        Float maxt = tmax;
         Float t_start = mint_box - math::RayEpsilon<Float>;
         Float t_end = dr::minimum(maxt_box, maxt); 
         Float t = t_start;
@@ -160,8 +162,9 @@ public:
         // UInt32 stride_f = stride_z * (m_grid_res.z() + 1);
 
         Log(Debug, "ray.o: %d, ray.d: %d", ray.o, ray.d);
+        Log(Debug, "m_bbox.min: %d, m_bbox.max: %d, active : %d", m_bbox.min, m_bbox.max, active);
         Log(Debug, "t_end: %f, t_start: %f, remaining_dist: %f, maxt: %f", t_end, t_start, remaining_dist, maxt);
-        Log(Debug, "start_voxel: %f, end_voxel: %f", start_voxel, end_voxel);
+        Log(Debug, "start_voxel: %f, end_voxel: %f, grid_res", start_voxel, end_voxel, m_grid_res);
         Log(Debug, "grid_start: %f, next_voxel_pos: %f, is_valid_dir: %f", grid_start, next_voxel_pos, is_valid_dir);
         Log(Debug, "stride_f: %f, stride_x: %f, stride_y: %f, stride_z: %f,", stride_f, stride_x, stride_y, stride_z );
 

@@ -134,6 +134,7 @@ public:
     virtual void accumulate(
         const Ray3f &ray,
         const SurfaceInteraction3f &si,
+        Float tmax,
         Spectrum emitted,
         Spectrum throughput,
         ScalarFloat sample_scale,
