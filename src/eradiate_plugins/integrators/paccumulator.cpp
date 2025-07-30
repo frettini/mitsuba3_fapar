@@ -326,14 +326,6 @@ public:
         if (min_depth < 0 || min_depth > (int) m_max_depth)
             Throw("\"min_depth\" must be set to 0 or a value smaller than max depth");
         m_min_depth = (uint32_t) min_depth;
-
-        if (props.has_property("pbox_min") && props.has_property("pbox_max")){
-            ScalarPoint3f bbox_min = props.get<ScalarPoint3f>("pbox_min");
-            ScalarPoint3f bbox_max = props.get<ScalarPoint3f>("pbox_max");
-            m_pbox = ScalarBoundingBox3f(bbox_min, bbox_max);
-        } else if (props.has_property("pbox")) {
-            m_pbox = props.get<ScalarBoundingBox3f>("pbox");
-        }
     };
 
     /// Virtual destructor
@@ -360,8 +352,6 @@ public:
     /// Depth to begin using russian roulette
     uint32_t m_rr_depth;
 
-    // periodic boundary
-    ScalarBoundingBox3f m_pbox;
 
     bool m_film_scale;
 
@@ -375,11 +365,21 @@ template <typename Float, typename Spectrum>
 class ParticleAccumulatorIntegrator final : public VolumeIntegrator<Float, Spectrum> {
 public:
     MI_IMPORT_BASE(VolumeIntegrator, m_samples_per_pass, m_hide_emitters,
-                    m_rr_depth, m_min_depth, m_max_depth, m_pbox)
+                    m_rr_depth, m_min_depth, m_max_depth)
     MI_IMPORT_TYPES(Scene, Sensor, Film, Sampler, ImageBlock, Emitter,
-                     EmitterPtr, BSDF, BSDFPtr)
+                     EmitterPtr, BSDF, BSDFPtr, Shape, ShapePtr)
 
-    ParticleAccumulatorIntegrator(const Properties &props) : Base(props) { }
+    ParticleAccumulatorIntegrator(const Properties &props) : Base(props) { 
+        auto obj = props.object("periodic_box");
+        Shape *periodic_box = dynamic_cast<Shape *>(obj.get());
+        
+        m_pbox.reset();
+        if(periodic_box){
+            m_pbox = periodic_box->bbox();
+        }
+        m_pbox_extents = m_pbox.extents();
+        m_periodic_box = periodic_box;
+    }
 
     void sample(const Scene *scene, Sensor *sensor, Sampler *sampler, ScalarFloat sample_scale) const override {
         // Primary & further bounces illumination
@@ -444,17 +444,18 @@ public:
         Float eta(1.f);
         UInt32 depth = 0;
         
-        Mask pbounds_valid = m_pbox.valid();
-        Vector3f pbound_extent = m_pbox.extents();
+        Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
         UInt32 max_periodic_iterations = 100;
         UInt32 periodic_count = 0;
 
         Log(Debug, "trace_light_ray");
-        
 
-        if(dr::any(m_pbox.valid() && !m_pbox.contains(ray.o)))
-            Throw("Periodic bounds but sampled ray not in contained in them.");
+        if(dr::any(pbounds_valid && !m_pbox.contains(ray.o))){
+            Log(Debug, "ray.o: %d.", ray.o);
+            Log(Debug, "bbox: %d.", m_pbox);
+            Throw("Periodic bounds but sampled ray not in contained in them");
 
+        }
 
         if (m_max_depth >= 0)
             active &= depth < m_max_depth;
@@ -481,27 +482,34 @@ public:
                                     /* coherent = */ dr::eq(depth, 0u),
                                     active);
             Float t = si.t;
+            
+            if (dr::any_or<true>(pbounds_valid)) {
+                escaped_pbound = pbounds_valid && dr::eq(m_periodic_box, si.shape);
+                dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
+                Log(Debug, "si.p: %d, si.t: %f", si.p, si.t);
+                Log(Debug, "Hit cube: %d", dr::eq(m_periodic_box, si.shape));
+            }
 
             /* ------------------- Periodic Bound Part 1 -------------------- */
             // Check intersection with bounding box and update surface interaction 
 
-            Vector3f pbox_si = dr::zeros<Vector3f>();
-            if(dr::any_or<true>(pbounds_valid)){
-                auto [no_intersect, tmin, tmax] = m_pbox.ray_intersect(ray);
-                dr::masked(pbox_si, no_intersect) = ray(tmax) + ray.d * math::RayEpsilon<Float>;
+            // Vector3f pbox_si = dr::zeros<Vector3f>();
+            // if(dr::any_or<true>(pbounds_valid)){
+            //     auto [no_intersect, tmin, tmax] = m_pbox.ray_intersect(ray);
+            //     dr::masked(pbox_si, no_intersect) = ray(tmax) + ray.d * math::RayEpsilon<Float>;
 
-                // Escaped boundary if intersection with it is smaller than surface intersection.
-                escaped_pbound = pbounds_valid &&  tmax < si.t;
+            //     // Escaped boundary if intersection with it is smaller than surface intersection.
+            //     escaped_pbound = pbounds_valid &&  tmax < si.t;
 
-                // invalidate si, and set next t to the pbox intersection distance
-                // NOTE: might need to increment t accordingly for volumetric interactions?
-                dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
-                dr::masked(t, escaped_pbound) = tmax;
+            //     // invalidate si, and set next t to the pbox intersection distance
+            //     // NOTE: might need to increment t accordingly for volumetric interactions?
+            //     dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
+            //     dr::masked(t, escaped_pbound) = tmax;
 
 
-                Log(Debug, "pbox_si.x: %.6f, pbox_si.y: %.6f, pbox_si.z: %.6f", pbox_si.x(), pbox_si.y(), pbox_si.z());
-                Log(Debug, "tmin: %f, tmax: %f, no_intersect: %d, si.t: %f", tmin, tmax, no_intersect, si.t);
-            }
+            //     Log(Debug, "pbox_si.x: %.6f, pbox_si.y: %.6f, pbox_si.z: %.6f", pbox_si.x(), pbox_si.y(), pbox_si.z());
+            //     Log(Debug, "tmin: %f, tmax: %f, no_intersect: %d, si.t: %f", tmin, tmax, no_intersect, si.t);
+            // }
 
             /* ------------------------- Accumulate ------------------------- */
             Mask pass = order_filter(depth);
@@ -523,33 +531,17 @@ public:
                 && si.is_valid() 
                 && !escaped_pbound;
 
-            Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d", escaped_pbound, active_surface, active);
+            Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d, filter: %d", escaped_pbound, active_surface, active, pass);
 
-            /* ------------------- Periodic Bound Part 2 -------------------- */
-            // Update ray and active mask 
+            
 
-            if(dr::any_or<true>(escaped_pbound)){
-                // Mark any rays that exist pbounds by the top or bottom as inactive.
-                active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
-                // add safeguards in case we get stuck in an infinite loop
-                periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
-                active &= periodic_count < max_periodic_iterations;
 
-                // apply modulo of the offset on the ray origin
-                Vector3f offset = pbox_si - m_pbox.min;
-                Vector3f wrapped_offset = offset - dr::floor(offset / pbound_extent) * pbound_extent;
-                dr::masked(ray.o, escaped_pbound) = wrapped_offset + m_pbox.min;
-                
-                Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
-                Log(Debug, "ray: %d", ray.o);
-            }
+            // if (dr::any_or<false>(escaped_pbound)) {
+            //     Log(Debug, "continue to next");
+            //     continue; // early continue for scalar mode
+            // }
 
-            if (dr::any_or<false>(escaped_pbound)) {
-                Log(Debug, "continue to next");
-                continue; // early continue for scalar mode
-            }
-
-            if (dr::none_or<false>(active_surface)) {
+            if (dr::none_or<false>(active)) {
                 break; // early exit for scalar mode
             }
             
@@ -574,19 +566,40 @@ public:
             Float correction = dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
                                        (Frame3f::cos_theta(bs.wo) * wi_dot_geo_n));
 
-            // ------ Update loop variables based on current interaction ------
+            /* ------------------- Update loop variables -------------------- */
             dr::masked(throughput, active_surface) *= bsdf_val * correction;
             dr::masked(eta, active_surface) *= bs.eta;
 
             // Spawn ray for next iteration
             dr::masked(ray, active_surface) = si.spawn_ray(si.to_world(bs.wo));
+
+            /* ------------------- Periodic Bound Part 2 -------------------- */
+            // Update ray and active mask 
+            if(dr::any_or<true>(escaped_pbound)){
+                // Mark any rays that exist pbounds by the top or bottom as inactive.
+                Point3f pbox_si = ray(t + math::RayEpsilon<Float>);
+                active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
+                // add safeguards in case we get stuck in an infinite loop
+                periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
+                active &= periodic_count < max_periodic_iterations;
+
+                // apply modulo of the offset on the ray origin
+                Vector3f offset = pbox_si - m_pbox.min;
+                Vector3f wrapped_offset = offset - dr::floor(offset / m_pbox_extents) * m_pbox_extents;
+                dr::masked(ray.o, escaped_pbound) = wrapped_offset + m_pbox.min;
+                
+                Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
+                Log(Debug, "ray: %d", ray.o);
+            }
+
             Log(Debug, "spawned ray.o: %d, ray.d: %d", ray.o, ray.d);
+
             // -------------------- Stopping criterion ---------------------
             
-            dr::masked(depth, si.is_valid()) += 1;
+            dr::masked(depth, si.is_valid() && !escaped_pbound) += 1;
 
             // Russian Roulette
-            Mask use_rr = depth > m_rr_depth;
+            Mask use_rr = depth > m_rr_depth && !escaped_pbound;
             if (dr::any_or<true>(use_rr)) {
                 Float q = dr::minimum(
                     dr::max(unpolarized_spectrum(throughput)) * dr::sqr(eta), 0.95f);
@@ -594,9 +607,8 @@ public:
                 dr::masked(throughput, use_rr) *= dr::rcp(q);
             }
 
-
             active &= dr::any(dr::neq(unpolarized_spectrum(throughput), 0.f));
-            active &= active_surface || !escaped_pbound;
+            active &= active_surface || escaped_pbound;
         }
 
         return { throughput, 1.f };
@@ -617,7 +629,8 @@ public:
         if (dr::none_or<false>(si.is_valid()))
             return pass;
         BSDFPtr bsdf = si.bsdf();
-        pass = dr::eq(bsdf->filter(), +FilterType::Include);
+        pass &= dr::eq(bsdf->filter(), +FilterType::Include);
+        pass &= dr::neq(bsdf->flags(), +BSDFFlags::Null);
         return pass;
     }
 
@@ -632,6 +645,11 @@ public:
                            "]",
                            m_max_depth, m_rr_depth);
     }
+
+protected:
+    ShapePtr m_periodic_box;
+    ScalarBoundingBox3f m_pbox;
+    ScalarVector3f m_pbox_extents;
 
     MI_DECLARE_CLASS()
 };
