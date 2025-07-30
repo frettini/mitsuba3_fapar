@@ -97,8 +97,8 @@ public:
 
     void accumulate(
         const Ray3f &ray,
-        const SurfaceInteraction3f &/*si*/,
-        Float tmax,
+        const SurfaceInteraction3f &si,
+        Float /*tmax*/,
         Spectrum emitted,
         Spectrum throughput,
         ScalarFloat sample_scale,
@@ -115,7 +115,7 @@ public:
         Float maxt_box = dr::min(dr::maximum(t_bmin, t_bmax));
 
         // Offset the start distance so that it we can account the first voxel face.
-        Float maxt = tmax;
+        Float maxt = si.t;
         Float t_start = mint_box - math::RayEpsilon<Float>;
         Float t_end = dr::minimum(maxt_box, maxt); 
         Float t = t_start;
@@ -208,7 +208,7 @@ public:
                 Float cos_theta = dr::sum(dr::select(mask, dr::abs(ray.d), 0));
                 Log(Debug, "flux: %f, cos_theta : %f", flux, cos_theta);
                 // m_film->write_tensor(flux[0] * cos_theta, current_voxel_flat, active && filter);
-                m_film->write_tensor(flux[0], current_voxel_flat, active && filter);
+                m_film->write_tensor(flux[0], current_voxel_flat, active);
             }
             // ===========================
 

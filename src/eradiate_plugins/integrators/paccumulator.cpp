@@ -379,6 +379,12 @@ public:
         }
         m_pbox_extents = m_pbox.extents();
         m_periodic_box = periodic_box;
+
+        if (periodic_box){
+            if (!dr::all(has_flag(m_periodic_box->bsdf()->flags(), BSDFFlags::Null))) {
+                Throw("Periodic Box bsdf must have a Null flag!");
+            }
+        }
     }
 
     void sample(const Scene *scene, Sensor *sensor, Sampler *sampler, ScalarFloat sample_scale) const override {
@@ -445,7 +451,7 @@ public:
         UInt32 depth = 0;
         
         Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
-        UInt32 max_periodic_iterations = 100;
+        UInt32 max_periodic_iterations = 10;
         UInt32 periodic_count = 0;
 
         Log(Debug, "trace_light_ray");
@@ -483,36 +489,9 @@ public:
                                     active);
             Float t = si.t;
             
-            if (dr::any_or<true>(pbounds_valid)) {
-                escaped_pbound = pbounds_valid && dr::eq(m_periodic_box, si.shape);
-                dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
-                Log(Debug, "si.p: %d, si.t: %f", si.p, si.t);
-                Log(Debug, "Hit cube: %d", dr::eq(m_periodic_box, si.shape));
-            }
-
-            /* ------------------- Periodic Bound Part 1 -------------------- */
-            // Check intersection with bounding box and update surface interaction 
-
-            // Vector3f pbox_si = dr::zeros<Vector3f>();
-            // if(dr::any_or<true>(pbounds_valid)){
-            //     auto [no_intersect, tmin, tmax] = m_pbox.ray_intersect(ray);
-            //     dr::masked(pbox_si, no_intersect) = ray(tmax) + ray.d * math::RayEpsilon<Float>;
-
-            //     // Escaped boundary if intersection with it is smaller than surface intersection.
-            //     escaped_pbound = pbounds_valid &&  tmax < si.t;
-
-            //     // invalidate si, and set next t to the pbox intersection distance
-            //     // NOTE: might need to increment t accordingly for volumetric interactions?
-            //     dr::masked(si.t, escaped_pbound) =  dr::Infinity<Float>;
-            //     dr::masked(t, escaped_pbound) = tmax;
-
-
-            //     Log(Debug, "pbox_si.x: %.6f, pbox_si.y: %.6f, pbox_si.z: %.6f", pbox_si.x(), pbox_si.y(), pbox_si.z());
-            //     Log(Debug, "tmin: %f, tmax: %f, no_intersect: %d, si.t: %f", tmin, tmax, no_intersect, si.t);
-            // }
-
             /* ------------------------- Accumulate ------------------------- */
             Mask pass = order_filter(depth);
+            // Null interaction are discarded, Periodic bounds have to be Null
             pass &= bsdf_filter(si);
 
             // Accumulate the ray contribution, could be NEE or other strategies.
@@ -528,18 +507,9 @@ public:
 
             active_surface &= 
                 (depth + 1 < m_max_depth) 
-                && si.is_valid() 
-                && !escaped_pbound;
+                && si.is_valid();
 
             Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d, filter: %d", escaped_pbound, active_surface, active, pass);
-
-            
-
-
-            // if (dr::any_or<false>(escaped_pbound)) {
-            //     Log(Debug, "continue to next");
-            //     continue; // early continue for scalar mode
-            // }
 
             if (dr::none_or<false>(active)) {
                 break; // early exit for scalar mode
@@ -566,7 +536,12 @@ public:
             Float correction = dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
                                        (Frame3f::cos_theta(bs.wo) * wi_dot_geo_n));
 
+            /* ------------------- Periodic Bound Part 1 -------------------- */
+            escaped_pbound = pbounds_valid && si.is_valid() && dr::eq(m_periodic_box, si.shape);
+            active_surface = !escaped_pbound;
+
             /* ------------------- Update loop variables -------------------- */
+            
             dr::masked(throughput, active_surface) *= bsdf_val * correction;
             dr::masked(eta, active_surface) *= bs.eta;
 
@@ -574,11 +549,13 @@ public:
             dr::masked(ray, active_surface) = si.spawn_ray(si.to_world(bs.wo));
 
             /* ------------------- Periodic Bound Part 2 -------------------- */
+
             // Update ray and active mask 
             if(dr::any_or<true>(escaped_pbound)){
                 // Mark any rays that exist pbounds by the top or bottom as inactive.
                 Point3f pbox_si = ray(t + math::RayEpsilon<Float>);
                 active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
+
                 // add safeguards in case we get stuck in an infinite loop
                 periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
                 active &= periodic_count < max_periodic_iterations;
@@ -630,7 +607,7 @@ public:
             return pass;
         BSDFPtr bsdf = si.bsdf();
         pass &= dr::eq(bsdf->filter(), +FilterType::Include);
-        pass &= dr::neq(bsdf->flags(), +BSDFFlags::Null);
+        pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);
         return pass;
     }
 
