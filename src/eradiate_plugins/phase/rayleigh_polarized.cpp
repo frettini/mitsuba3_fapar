@@ -49,6 +49,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("depolarization", m_depolarization.get(),
                              +ParamFlags::Differentiable);
     }
