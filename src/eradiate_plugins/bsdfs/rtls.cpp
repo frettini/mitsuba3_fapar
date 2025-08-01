@@ -83,6 +83,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("f_iso", m_f_iso.get(),
                              +ParamFlags::Differentiable);
         callback->put_object("f_vol", m_f_vol.get(),

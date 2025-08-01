@@ -148,6 +148,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_parameter("wavelength", m_wavelength,
                                 +ParamFlags::NonDifferentiable);
         callback->put_object("wind_speed", m_wind_speed.get(),

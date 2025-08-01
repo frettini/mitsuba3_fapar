@@ -81,6 +81,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("indices", m_indices.get(),
                              +ParamFlags::NonDifferentiable);
         for (size_t i = 0; i < m_nested_bsdf.size(); ++i) {

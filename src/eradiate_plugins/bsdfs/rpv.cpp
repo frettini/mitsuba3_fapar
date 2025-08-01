@@ -92,6 +92,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("rho_0", m_rho_0.get(),
                              +ParamFlags::Differentiable);
         callback->put_object("g", m_g.get(), +ParamFlags::Differentiable);
