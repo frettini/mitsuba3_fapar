@@ -369,8 +369,8 @@ public:
     MI_IMPORT_BASE(VolumeIntegrator, m_samples_per_pass, m_hide_emitters,
                     m_rr_depth, m_min_depth, m_max_depth)
     MI_IMPORT_TYPES(Scene, Sensor, Film, Sampler, ImageBlock, Emitter,
-                    EmitterPtr, BSDF, BSDFPtr, Shape, ShapePtr, Medium, 
-                    MediumPtr, PhaseFunctionContext)
+                    EmitterPtr, BSDF, BSDFPtr, Shape, ShapePtr, Medium, MediumPtr,
+                    PhaseFunctionContext)
 
     ParticleAccumulatorIntegrator(const Properties &props) : Base(props) { 
         if (props.has_property("periodic_box")){
@@ -433,8 +433,9 @@ public:
         // Sample one ray from an emitter in the scene.
         auto [ray, ray_weight, emitter] = scene->sample_emitter_ray(
             time, wavelength_sample, direction_sample, position_sample);
-        Log(Debug, "initia_medium: %f", emitter->medium());
-        return { ray, ray_weight, emitter->medium() };
+        MediumPtr medium = emitter->medium();
+        Log(Debug, "is medium not a nullptr: %f", dr::neq(medium, nullptr));
+        return { ray, ray_weight, medium };
     }
 
     /**
@@ -484,7 +485,6 @@ public:
         UInt32 periodic_count = 0;
 
         Log(Debug, "trace_light_ray");
-        Log(Debug, "initia_medium: %f", initial_medium);
 
         if(dr::any(pbounds_valid && !m_pbox.contains(ray.o))){
             Log(Debug, "ray.o: %d.", ray.o);
@@ -514,6 +514,7 @@ public:
 
             Mask active_medium = active && dr::neq(medium, nullptr);
             Mask active_surface = active && !active_medium;
+            Log(Debug, "active_medium: %f, active_surface: %f", active_medium, active_surface);
 
             // If the medium does not have a spectrally varying extinction,
             // we can perform a few optimizations to speed up rendering
@@ -532,12 +533,11 @@ public:
                 active);
                 
             Float t = si.t;
-            Log(Debug, "si.t: %f, t: %f", si.t, t);
 
             MediumInteraction3f mei = dr::zeros<MediumInteraction3f>();
             if (dr::any_or<true>(active_medium)) {
-                Log(Debug, "global");
                 mei = medium->sample_interaction(ray, sampler->next_1d(active_medium), channel, active_medium);
+                Log(Debug, "sampled mei.t: %f", ray.maxt, mei.t);
                 dr::masked(mei.t, active_medium && (si.t < mei.t)) = dr::Infinity<Float>;
                 dr::masked(t, active_medium && mei.t < si.t) = mei.t;
                 
@@ -552,13 +552,12 @@ public:
 
                 Log(Debug, "escaped_medium: %f, active_medium: %f", escaped_medium, active_medium);
             }
+            Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
             /* ------------------------- Accumulate ------------------------- */
-            Log(Debug, "counter");
             Mask pass = order_filter(depth);
             // Null interaction are discarded, Periodic bounds have to be Null
             pass &= bsdf_filter(si);
-            Log(Debug, "strike");
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
                 ray, 
@@ -572,7 +571,7 @@ public:
                 /*active=*/active);
 
 
-            Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d, filter: %d", escaped_pbound, active_surface, active, pass);
+            Log(Debug, "active: %d, filter: %d", active, pass);
 
             /* ----------------- Scattering Event Selection ----------------- */
             if (dr::any_or<true>(active_medium)) {
@@ -601,6 +600,8 @@ public:
             dr::masked(depth, act_medium_scatter) += 1;
             active &= depth < (uint32_t) m_max_depth;
             act_medium_scatter &= active;
+
+            Log(Debug, "act_null_scatter: %d, act_medium_scatter: %d", act_null_scatter, act_medium_scatter);
 
             // early exit
             if (dr::none_or<false>(active))
@@ -631,6 +632,8 @@ public:
 
             active_surface |= escaped_medium;
             active_surface &= si.is_valid();
+
+            Log(Debug, "active_surface: %d", active_surface);
 
             if (dr::any_or<true>(active_surface)) {
             /* ----------------------- BSDF sampling ------------------------ */
@@ -703,10 +706,11 @@ public:
                 dr::masked(active, use_rr) &= sampler->next_1d(active) < q;
                 dr::masked(throughput, use_rr) *= dr::rcp(q);
             }
-
+            
             active &= dr::any(dr::neq(unpolarized_spectrum(throughput), 0.f));
             active &= (active_surface | active_medium);
             active &= depth < (uint32_t) m_max_depth;
+            Log(Debug, "throughput: %d, use_rr: %d, active: %d", throughput, use_rr, active);
         }
 
         return { throughput, 1.f };
