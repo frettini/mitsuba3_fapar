@@ -95,6 +95,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("weight",  m_weight.get(),          +ParamFlags::Differentiable);
         callback->put_object("phase_0", m_nested_phase[0].get(), +ParamFlags::Differentiable);
         callback->put_object("phase_1", m_nested_phase[1].get(), +ParamFlags::Differentiable);

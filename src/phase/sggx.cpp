@@ -68,6 +68,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("S", m_ndf_params.get(), +ParamFlags::Differentiable);
     }
 

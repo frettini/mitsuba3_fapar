@@ -59,6 +59,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_parameter("g", m_g, ParamFlags::Differentiable |
                                           ParamFlags::Discontinuous);
     }
