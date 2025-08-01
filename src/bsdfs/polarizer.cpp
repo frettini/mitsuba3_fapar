@@ -92,6 +92,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("theta",         m_theta.get(),         ParamFlags::Differentiable | ParamFlags::Discontinuous);
         callback->put_object("transmittance", m_transmittance.get(), +ParamFlags::Differentiable);
     }

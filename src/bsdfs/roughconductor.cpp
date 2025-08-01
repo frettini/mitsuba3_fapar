@@ -211,6 +211,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         if (m_specular_reflectance)
             callback->put_object("specular_reflectance", m_specular_reflectance.get(), +ParamFlags::Differentiable);
         if (!has_flag(m_flags, BSDFFlags::Anisotropic))

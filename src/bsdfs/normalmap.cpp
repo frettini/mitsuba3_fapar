@@ -108,6 +108,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("nested_bsdf", m_nested_bsdf.get(), +ParamFlags::Differentiable);
         callback->put_object("normalmap",   m_normalmap.get(),   ParamFlags::Differentiable | ParamFlags::Discontinuous);
     }

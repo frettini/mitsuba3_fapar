@@ -220,6 +220,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("eta",                                     m_eta_thin.get() , ParamFlags::Differentiable | ParamFlags::Discontinuous);
         callback->put_object("roughness",                               m_roughness.get(), ParamFlags::Differentiable | ParamFlags::Discontinuous);
         callback->put_object("diff_trans",                              m_diff_trans.get(),  +ParamFlags::Differentiable);

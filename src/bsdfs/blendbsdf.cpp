@@ -103,6 +103,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("weight", m_weight.get(),          +ParamFlags::Differentiable);
         callback->put_object("bsdf_0", m_nested_bsdf[0].get(),  +ParamFlags::Differentiable);
         callback->put_object("bsdf_1", m_nested_bsdf[1].get(),  +ParamFlags::Differentiable);

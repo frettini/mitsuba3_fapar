@@ -104,6 +104,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("brdf_0", m_brdf[0].get(), +ParamFlags::Differentiable);
         callback->put_object("brdf_1", m_brdf[1].get(), +ParamFlags::Differentiable);
     }

@@ -269,6 +269,7 @@ public:
     }
 
     void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
         callback->put_object("clearcoat",       m_clearcoat.get(),       +ParamFlags::Differentiable);
         callback->put_object("clearcoat_gloss", m_clearcoat_gloss.get(), +ParamFlags::Differentiable);
         callback->put_object("metallic",        m_metallic.get(),        +ParamFlags::Differentiable);
