@@ -7,6 +7,8 @@
 #include <mitsuba/render/records.h>
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/render/filter.h>
+#include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -367,39 +369,56 @@ public:
     MI_IMPORT_BASE(VolumeIntegrator, m_samples_per_pass, m_hide_emitters,
                     m_rr_depth, m_min_depth, m_max_depth)
     MI_IMPORT_TYPES(Scene, Sensor, Film, Sampler, ImageBlock, Emitter,
-                     EmitterPtr, BSDF, BSDFPtr, Shape, ShapePtr)
+                    EmitterPtr, BSDF, BSDFPtr, Shape, ShapePtr, Medium, 
+                    MediumPtr, PhaseFunctionContext)
 
     ParticleAccumulatorIntegrator(const Properties &props) : Base(props) { 
-        auto obj = props.object("periodic_box");
-        Shape *periodic_box = dynamic_cast<Shape *>(obj.get());
-        
-        m_pbox.reset();
-        if(periodic_box){
-            m_pbox = periodic_box->bbox();
-        }
-        m_pbox_extents = m_pbox.extents();
-        m_periodic_box = periodic_box;
+        if (props.has_property("periodic_box")){
+            auto obj = props.object("periodic_box");
+            Shape *periodic_box = dynamic_cast<Shape *>(obj.get());
 
-        if (periodic_box){
-            if (!dr::all(has_flag(m_periodic_box->bsdf()->flags(), BSDFFlags::Null))) {
-                Throw("Periodic Box bsdf must have a Null flag!");
+            m_pbox.reset();
+            if(periodic_box){
+                m_pbox = periodic_box->bbox();
+            }
+            m_pbox_extents = m_pbox.extents();
+            m_periodic_box = periodic_box;
+    
+            if (periodic_box){
+                if (!dr::all(has_flag(m_periodic_box->bsdf()->flags(), BSDFFlags::Null))) {
+                    Throw("Periodic Box bsdf must have a Null flag!");
+                }
             }
         }
+        
     }
+
+    MI_INLINE
+    Float index_spectrum(const UnpolarizedSpectrum &spec, const UInt32 &idx) const {
+        Float m = spec[0];
+        if constexpr (is_rgb_v<Spectrum>) { // Handle RGB rendering
+            dr::masked(m, dr::eq(idx, 1u)) = spec[1];
+            dr::masked(m, dr::eq(idx, 2u)) = spec[2];
+        } else {
+            DRJIT_MARK_USED(idx);
+        }
+        return m;
+    }
+
 
     void sample(const Scene *scene, Sensor *sensor, Sampler *sampler, ScalarFloat sample_scale) const override {
         // Primary & further bounces illumination
-        auto [ray, throughput] = prepare_ray(scene, sensor, sampler);
+        auto [ray, throughput, medium] = prepare_ray(scene, sensor, sampler);
 
         Float throughput_max = dr::max(unpolarized_spectrum(throughput));
         Mask active = dr::neq(throughput_max, 0.f);
 
-        trace_light_ray(ray, scene, sensor, sampler, throughput,
+        trace_light_ray(ray, scene, sensor, sampler, medium, throughput,
                         sample_scale, active);
     }
 
     /// Samples a ray from a random emitter in the scene.
-    std::pair<Ray3f, Spectrum> prepare_ray(const Scene *scene,
+    std::tuple<Ray3f, Spectrum, MediumPtr> prepare_ray(const Scene *scene,
                                            const Sensor *sensor,
                                            Sampler *sampler) const {
         Float time = sensor->shutter_open();
@@ -414,8 +433,8 @@ public:
         // Sample one ray from an emitter in the scene.
         auto [ray, ray_weight, emitter] = scene->sample_emitter_ray(
             time, wavelength_sample, direction_sample, position_sample);
-
-        return { ray, ray_weight };
+        Log(Debug, "initia_medium: %f", emitter->medium());
+        return { ray, ray_weight, emitter->medium() };
     }
 
     /**
@@ -433,8 +452,9 @@ public:
      */
     std::pair<Spectrum, Float>
     trace_light_ray(Ray3f ray, const Scene *scene, Sensor *sensor,
-                    Sampler *sampler, Spectrum throughput,
-                    ScalarFloat sample_scale, Mask active = true) const {
+                    Sampler *sampler, MediumPtr initial_medium, 
+                    Spectrum throughput, ScalarFloat sample_scale, 
+                    Mask active = true) const {
         // @PONDER: currently the throughput includes both the weighted emitted 
         // radiance further weighted by the propability to sample the ray. We
         // could decide to rename this to Le, and have throughput act like in 
@@ -450,11 +470,21 @@ public:
         Float eta(1.f);
         UInt32 depth = 0;
         
+        // Initialize medium variables
+        MediumPtr medium = initial_medium;
+        UInt32 channel = 0;
+        if (is_rgb_v<Spectrum>) {
+            uint32_t n_channels = (uint32_t) dr::array_size_v<Spectrum>;
+            channel = (UInt32) dr::minimum(sampler->next_1d(active) * n_channels, n_channels - 1);
+        }
+
+        // Initialize periodic bound variables
         Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
-        UInt32 max_periodic_iterations = 10;
+        UInt32 max_periodic_iterations = 10; // TODO: include with depth?
         UInt32 periodic_count = 0;
 
         Log(Debug, "trace_light_ray");
+        Log(Debug, "initia_medium: %f", initial_medium);
 
         if(dr::any(pbounds_valid && !m_pbox.contains(ray.o))){
             Log(Debug, "ray.o: %d.", ray.o);
@@ -479,25 +509,61 @@ public:
             Log(Debug, "====== LOOP depth: %d ======", depth);
             Log(Debug, "ray.o: %f", ray.o);
             Log(Debug, "ray.d: %f", ray.d);
-            Mask escaped_pbound = false;
-            Mask active_surface = active;
+            Mask escaped_pbound = false, escaped_medium = false;
+            Mask act_null_scatter = false, act_medium_scatter = false;
 
+            Mask active_medium = active && dr::neq(medium, nullptr);
+            Mask active_surface = active && !active_medium;
+
+            // If the medium does not have a spectrally varying extinction,
+            // we can perform a few optimizations to speed up rendering
+            Mask is_spectral = active_medium;
+            Mask not_spectral = false;
+            if (dr::any_or<true>(active_medium)) {
+                is_spectral &= medium->has_spectral_extinction();
+                not_spectral = !is_spectral && active_medium;
+            }
+
+            /* ------------------------ Interactions ------------------------ */
             SurfaceInteraction3f si = 
-                scene->ray_intersect(ray, 
-                                    /* ray_flags = */ +RayFlags::All, 
-                                    /* coherent = */ dr::eq(depth, 0u),
-                                    active);
+            scene->ray_intersect(ray, 
+                /* ray_flags = */ +RayFlags::All, 
+                /* coherent = */ dr::eq(depth, 0u),
+                active);
+                
             Float t = si.t;
-            
+            Log(Debug, "si.t: %f, t: %f", si.t, t);
+
+            MediumInteraction3f mei = dr::zeros<MediumInteraction3f>();
+            if (dr::any_or<true>(active_medium)) {
+                Log(Debug, "global");
+                mei = medium->sample_interaction(ray, sampler->next_1d(active_medium), channel, active_medium);
+                dr::masked(mei.t, active_medium && (si.t < mei.t)) = dr::Infinity<Float>;
+                dr::masked(t, active_medium && mei.t < si.t) = mei.t;
+                
+                if (dr::any_or<true>(is_spectral)) {
+                    auto [tr, free_flight_pdf] = medium->transmittance_eval_pdf(mei, si, is_spectral);
+                    Float tr_pdf = index_spectrum(free_flight_pdf, channel);
+                    dr::masked(throughput, is_spectral) *= dr::select(tr_pdf > 0.f, tr / tr_pdf, 0.f);
+                }
+
+                escaped_medium = active_medium && !mei.is_valid();
+                active_medium &= mei.is_valid();
+
+                Log(Debug, "escaped_medium: %f, active_medium: %f", escaped_medium, active_medium);
+            }
+
             /* ------------------------- Accumulate ------------------------- */
+            Log(Debug, "counter");
             Mask pass = order_filter(depth);
             // Null interaction are discarded, Periodic bounds have to be Null
             pass &= bsdf_filter(si);
-
+            Log(Debug, "strike");
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
                 ray, 
                 si, 
+                mei,
                 /*tmax=*/t,
                 /*emitted=*/throughput, 
                 /*throughput=*/Spectrum(1.f), 
@@ -505,87 +571,142 @@ public:
                 /*filter=*/pass, 
                 /*active=*/active);
 
-            active_surface &= 
-                (depth + 1 < m_max_depth) 
-                && si.is_valid();
 
             Log(Debug, "escaped_pbound: %d, active_surface: %d, active: %d, filter: %d", escaped_pbound, active_surface, active, pass);
 
-            if (dr::none_or<false>(active)) {
-                break; // early exit for scalar mode
+            /* ----------------- Scattering Event Selection ----------------- */
+            if (dr::any_or<true>(active_medium)) {
+                
+                // select scattering event
+                Mask null_scatter = sampler->next_1d(active_medium) >= index_spectrum(mei.sigma_t, channel) / index_spectrum(mei.combined_extinction, channel);
+                
+                act_null_scatter |= null_scatter && active_medium;
+                act_medium_scatter |= !act_null_scatter && active_medium; 
+
+                // Null scattering: update throughput only for spectral cases
+                if (dr::any_or<true>(is_spectral && act_null_scatter)) {
+                    dr::masked(throughput, is_spectral && act_null_scatter) *=
+                        mei.sigma_n * index_spectrum(mei.combined_extinction, channel) /
+                        index_spectrum(mei.sigma_n, channel);
+                }
+
+                // Real scattering: update throughput
+                if (dr::any_or<true>(is_spectral))
+                    dr::masked(throughput, is_spectral && act_medium_scatter) *=
+                        mei.sigma_s * index_spectrum(mei.combined_extinction, channel) / index_spectrum(mei.sigma_t, channel);
+                if (dr::any_or<true>(not_spectral))
+                    dr::masked(throughput, not_spectral && act_medium_scatter) *= mei.sigma_s / mei.sigma_t;
             }
-            
-            /* ----------------------- BSDF sampling ------------------------ */
-            BSDFPtr bsdf = si.bsdf(ray);
 
-            // Sample BSDF * cos(theta).
-            BSDFContext ctx(TransportMode::Importance);
-            auto [bs, bsdf_val] =
-                bsdf->sample(ctx, si, sampler->next_1d(active),
-                             sampler->next_2d(active), active);
+            dr::masked(depth, act_medium_scatter) += 1;
+            active &= depth < (uint32_t) m_max_depth;
+            act_medium_scatter &= active;
 
-            // Using geometric normals (wo points to the camera)
-            Float wi_dot_geo_n = dr::dot(si.n, -ray.d),
-                  wo_dot_geo_n = dr::dot(si.n, si.to_world(bs.wo));
+            // early exit
+            if (dr::none_or<false>(active))
+                break;
 
-            // Prevent light leaks due to shading normals
-            active &= (wi_dot_geo_n * Frame3f::cos_theta(si.wi) > 0.f) &&
-                      (wo_dot_geo_n * Frame3f::cos_theta(bs.wo) > 0.f);
+            if (dr::any_or<true>(act_null_scatter)) {
+                dr::masked(ray.o, act_null_scatter) = mei.p;
+                // dr::masked(si.t, act_null_scatter) = si.t - mei.t; // useful when optmizing the ray intersections
+            }
 
-            // Adjoint BSDF for shading normals -- [Veach, p. 155]
-            Float correction = dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
-                                       (Frame3f::cos_theta(bs.wo) * wi_dot_geo_n));
+            if (dr::any_or<true>(act_medium_scatter)) {
+            /* ----------------------- Phase sampling ----------------------- */
+                PhaseFunctionContext phase_ctx(sampler);
+                auto phase = mei.medium->phase_function();
 
-            /* ------------------- Periodic Bound Part 1 -------------------- */
-            escaped_pbound = pbounds_valid && si.is_valid() && dr::eq(m_periodic_box, si.shape);
-            active_surface = !escaped_pbound;
+                dr::masked(phase, !act_medium_scatter) = nullptr;
+                auto [wo, phase_weight, phase_pdf] = phase->sample(phase_ctx, mei,
+                    sampler->next_1d(act_medium_scatter),
+                    sampler->next_2d(act_medium_scatter),
+                    act_medium_scatter);
+                act_medium_scatter &= phase_pdf > 0.f;
 
             /* ------------------- Update loop variables -------------------- */
-            
-            dr::masked(throughput, active_surface) *= bsdf_val * correction;
-            dr::masked(eta, active_surface) *= bs.eta;
-
-            // Spawn ray for next iteration
-            dr::masked(ray, active_surface) = si.spawn_ray(si.to_world(bs.wo));
-
-            /* ------------------- Periodic Bound Part 2 -------------------- */
-
-            // Update ray and active mask 
-            if(dr::any_or<true>(escaped_pbound)){
-                // Mark any rays that exist pbounds by the top or bottom as inactive.
-                Point3f pbox_si = ray(t + math::RayEpsilon<Float>);
-                active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
-
-                // add safeguards in case we get stuck in an infinite loop
-                periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
-                active &= periodic_count < max_periodic_iterations;
-
-                // apply modulo of the offset on the ray origin
-                Vector3f offset = pbox_si - m_pbox.min;
-                Vector3f wrapped_offset = offset - dr::floor(offset / m_pbox_extents) * m_pbox_extents;
-                dr::masked(ray.o, escaped_pbound) = wrapped_offset + m_pbox.min;
-                
-                Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
-                Log(Debug, "ray: %d", ray.o);
+                Ray3f new_ray  = mei.spawn_ray(wo);
+                dr::masked(ray, act_medium_scatter) = new_ray;
+                dr::masked(throughput, act_medium_scatter) *= phase_weight;
             }
 
-            Log(Debug, "spawned ray.o: %d, ray.d: %d", ray.o, ray.d);
+            active_surface |= escaped_medium;
+            active_surface &= si.is_valid();
 
-            // -------------------- Stopping criterion ---------------------
-            
-            dr::masked(depth, si.is_valid() && !escaped_pbound) += 1;
+            if (dr::any_or<true>(active_surface)) {
+            /* ----------------------- BSDF sampling ------------------------ */
+                BSDFPtr bsdf = si.bsdf(ray);
 
+                // Sample BSDF * cos(theta).
+                BSDFContext ctx(TransportMode::Importance);
+                auto [bs, bsdf_val] =
+                    bsdf->sample(ctx, si, sampler->next_1d(active),
+                                sampler->next_2d(active), active);
+
+                // Using geometric normals (wo points to the camera)
+                Float wi_dot_geo_n = dr::dot(si.n, -ray.d),
+                    wo_dot_geo_n = dr::dot(si.n, si.to_world(bs.wo));
+
+                // Prevent light leaks due to shading normals
+                active &= (wi_dot_geo_n * Frame3f::cos_theta(si.wi) > 0.f) &&
+                        (wo_dot_geo_n * Frame3f::cos_theta(bs.wo) > 0.f);
+
+                // Adjoint BSDF for shading normals -- [Veach, p. 155]
+                Float correction = dr::abs((Frame3f::cos_theta(si.wi) * wo_dot_geo_n) /
+                                        (Frame3f::cos_theta(bs.wo) * wi_dot_geo_n));
+
+            /* ------------------- Update loop variables -------------------- */
+                
+                dr::masked(throughput, active_surface) *= bsdf_val * correction;
+                dr::masked(eta, active_surface) *= bs.eta;
+                
+                Mask non_null_bsdf = active_surface && !has_flag(bs.sampled_type, BSDFFlags::Null);
+                dr::masked(depth, non_null_bsdf) += 1;
+                
+            /* ------------------------- Ray Update ------------------------- */
+                // Spawn ray for next iteration
+                escaped_pbound = pbounds_valid && active_surface && dr::eq(m_periodic_box, si.shape);
+                
+                // In the case of not escaping pbound, update using BSDF sample
+                dr::masked(ray, !escaped_pbound) = si.spawn_ray(si.to_world(bs.wo));
+                
+                // Update ray and active mask 
+                if(dr::any_or<true>(escaped_pbound)){
+                    // Mark any rays that exist pbounds by the top or bottom as inactive.
+                    Point3f pbox_si = ray(t + math::RayEpsilon<Float>);
+                    active &= !(escaped_pbound && (pbox_si.z() <= m_pbox.min.z() || pbox_si.z() >= m_pbox.max.z()));
+
+                    // add safeguards in case we get stuck in an infinite loop
+                    periodic_count = dr::select(escaped_pbound, periodic_count + 1, 0);
+                    active &= periodic_count < max_periodic_iterations;
+
+                    // apply modulo of the offset on the ray origin
+                    Vector3f offset = pbox_si - m_pbox.min;
+                    Vector3f wrapped_offset = offset - dr::floor(offset / m_pbox_extents) * m_pbox_extents;
+                    dr::masked(ray.o, escaped_pbound) = wrapped_offset + m_pbox.min;
+                    
+                    Log(Debug, "offset: %d, wrapped_offset: %d", offset, wrapped_offset);
+                    Log(Debug, "ray: %d", ray.o);
+                }
+                
+                Log(Debug, "spawned ray.o: %d, ray.d: %d", ray.o, ray.d);
+                
+                Mask has_medium_trans                = active_surface && si.is_medium_transition();
+                dr::masked(medium, has_medium_trans) = si.target_medium(ray.d);
+                
+            }
+        
+            /* --------------------- Stopping criterion --------------------- */
             // Russian Roulette
             Mask use_rr = depth > m_rr_depth && !escaped_pbound;
             if (dr::any_or<true>(use_rr)) {
-                Float q = dr::minimum(
-                    dr::max(unpolarized_spectrum(throughput)) * dr::sqr(eta), 0.95f);
+                Float q = dr::minimum(dr::max(unpolarized_spectrum(throughput)) * dr::sqr(eta), 0.95f);
                 dr::masked(active, use_rr) &= sampler->next_1d(active) < q;
                 dr::masked(throughput, use_rr) *= dr::rcp(q);
             }
 
             active &= dr::any(dr::neq(unpolarized_spectrum(throughput), 0.f));
-            active &= active_surface || escaped_pbound;
+            active &= (active_surface | active_medium);
+            active &= depth < (uint32_t) m_max_depth;
         }
 
         return { throughput, 1.f };
@@ -624,7 +745,7 @@ public:
     }
 
 protected:
-    ShapePtr m_periodic_box;
+    ShapePtr m_periodic_box = nullptr;
     ScalarBoundingBox3f m_pbox;
     ScalarVector3f m_pbox_extents;
 
