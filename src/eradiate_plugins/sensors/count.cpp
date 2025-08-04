@@ -8,6 +8,7 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/sensor.h>
 #include <mitsuba/render/shape.h>
+#include <mitsuba/render/filter.h>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -38,7 +39,7 @@ template <typename Float, typename Spectrum>
 class CountSensor final : public Sensor<Float, Spectrum> {
 public:
     MI_IMPORT_BASE(Sensor, m_to_world, m_film, m_needs_sample_2,
-                   m_needs_sample_3)
+                   m_needs_sample_3, m_sensor_filter)
     MI_IMPORT_TYPES(Scene, Shape)
 
     using Matrix = dr::Matrix<Float, Transform4f::Size>;
@@ -61,6 +62,8 @@ public:
 
         m_needs_sample_2 = false;
         m_needs_sample_3 = false;
+
+        m_sensor_filter = +SensorFilterFlags::All;
     }
 
     void set_scene(const Scene *scene) override {

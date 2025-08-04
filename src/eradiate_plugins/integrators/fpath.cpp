@@ -127,6 +127,8 @@ public:
         Bool          prev_bsdf_delta = true;
         BSDFContext   bsdf_ctx;
 
+        UInt32 sensor_filter = +SensorFilterFlags::Surface;
+
         /* Set up a Dr.Jit loop. This optimizes away to a normal loop in scalar
            mode, and it generates either a a megakernel (default) or
            wavefront-style renderer in JIT variants. This can be controlled by
@@ -174,8 +176,11 @@ public:
                 Float mis_bsdf = mis_weight(prev_bsdf_pdf, em_pdf);
 
                 // @FILTER ============================ 
-                Mask pass = order_filter(depth);
-                pass &= bsdf_filter(si);
+                // Mask pass = order_filter(depth);
+                // pass &= bsdf_filter(si);
+                 Mask pass = active;
+                pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
+                pass &= bsdf_filter(si, sensor_filter);
 
                 // Accumulate, being careful with polarization (see spec_fma)
                 result[pass] = spec_fma(
@@ -197,8 +202,9 @@ public:
             // ---------------------- Emitter sampling ----------------------
 
             // @FILTER ============================ 
-            Mask pass = order_filter(depth + 1);
-            pass &= bsdf_filter(si);
+            Mask pass = active;
+            pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
+            pass &= bsdf_filter(si, sensor_filter);
 
             // Perform emitter sampling?
             Mask active_em = active_next && has_flag(bsdf->flags(), BSDFFlags::Smooth) && pass;
@@ -335,21 +341,21 @@ public:
             return dr::fmadd(a, b, c);
     }
 
-    /**
-     * \brief accumulate the values that pass the filters
-     */
-    Mask order_filter(const UInt32& depth) const {
-        // filtered value
-        Mask pass = depth >= m_min_depth && depth < m_max_depth;
-        return pass;
+    // /**
+    //  * \brief accumulate the values that pass the filters
+    //  */
+    // Mask order_filter(const UInt32& depth) const {
+    //     // filtered value
+    //     Mask pass = depth >= m_min_depth && depth < m_max_depth;
+    //     return pass;
         
-    }
+    // }
 
-    Mask bsdf_filter(const SurfaceInteraction3f& si) const {
-        BSDFPtr bsdf = si.bsdf();
-        Mask pass = dr::eq(bsdf->filter(), +FilterType::Include);
-        return pass;
-    }
+    // Mask bsdf_filter(const SurfaceInteraction3f& si) const {
+    //     BSDFPtr bsdf = si.bsdf();
+    //     Mask pass = dr::eq(bsdf->filter(), +FilterType::Include);
+    //     return pass;
+    // }
 
 protected:
     uint32_t m_min_depth;

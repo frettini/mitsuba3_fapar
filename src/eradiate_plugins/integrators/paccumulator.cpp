@@ -484,6 +484,9 @@ public:
         UInt32 max_periodic_iterations = 10; // TODO: include with depth?
         UInt32 periodic_count = 0;
 
+        // Initialize filter variables
+        UInt32 sensor_filter = sensor->sensor_filter();
+
         Log(Debug, "trace_light_ray");
 
         if(dr::any(pbounds_valid && !m_pbox.contains(ray.o))){
@@ -555,9 +558,13 @@ public:
             Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
             /* ------------------------- Accumulate ------------------------- */
-            Mask pass = order_filter(depth);
+            Mask pass = active;
+            pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
             // Null interaction are discarded, Periodic bounds have to be Null
-            pass &= bsdf_filter(si);
+            pass &= bsdf_filter(si, sensor_filter);
+            // pass &= shape_filter(si, sensor_filter);
+            // pass &= phase_filter(mei, sensor_filter);
+
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
                 ray, 
@@ -716,25 +723,25 @@ public:
         return { throughput, 1.f };
     }
 
-    /**
-     * \brief accumulate the values that pass the filters
-     */
-    Mask order_filter(const UInt32& depth) const {
-        // filtered value
-        Mask pass = depth >= m_min_depth && depth < m_max_depth;
-        return pass;
+    // /**
+    //  * \brief accumulate the values that pass the filters
+    //  */
+    // Mask order_filter(const UInt32& depth) const {
+    //     // filtered value
+    //     Mask pass = depth >= m_min_depth && depth < m_max_depth;
+    //     return pass;
         
-    }
+    // }
 
-    Mask bsdf_filter(const SurfaceInteraction3f& si) const {
-        Mask pass(true);
-        if (dr::none_or<false>(si.is_valid()))
-            return pass;
-        BSDFPtr bsdf = si.bsdf();
-        pass &= dr::eq(bsdf->filter(), +FilterType::Include);
-        pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);
-        return pass;
-    }
+    // Mask bsdf_filter(const SurfaceInteraction3f& si) const {
+    //     Mask pass(true);
+    //     if (dr::none_or<false>(si.is_valid()))
+    //         return pass;
+    //     BSDFPtr bsdf = si.bsdf();
+    //     pass &= dr::eq(bsdf->filter(), +FilterType::Include);
+    //     pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);
+    //     return pass;
+    // }
 
     //! @}
     // =============================================================
