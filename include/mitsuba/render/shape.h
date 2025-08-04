@@ -831,6 +831,7 @@ public:
      */
     virtual ScalarSize effective_primitive_count() const;
 
+    uint32_t filter(Mask /*active*/ = true) const { return m_filter; }
 
 #if defined(MI_ENABLE_EMBREE)
     /// Return the Embree version of this shape
@@ -963,6 +964,7 @@ protected:
     ref<Medium> m_exterior_medium;
     std::string m_id;
     ShapeType m_shape_type = ShapeType::Other;
+    uint32_t m_filter;
 
     uint32_t m_discontinuity_types = (uint32_t) DiscontinuityFlags::Empty;
     /// Sampling weight (proportional to scene)
@@ -1105,6 +1107,7 @@ DRJIT_VCALL_TEMPLATE_BEGIN(mitsuba::Shape)
     DRJIT_VCALL_GETTER(silhouette_discontinuity_types, uint32_t)
     DRJIT_VCALL_GETTER(silhouette_sampling_weight, float)
     DRJIT_VCALL_GETTER(shape_type, uint32_t)
+    DRJIT_VCALL_GETTER(filter, uint32_t)
     auto is_emitter() const { return neq(emitter(), nullptr); }
     auto is_sensor() const { return neq(sensor(), nullptr); }
     auto is_medium_transition() const { return neq(interior_medium(), nullptr) ||
