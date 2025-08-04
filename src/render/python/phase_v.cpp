@@ -47,6 +47,7 @@ public:
     }
 
     using PhaseFunction::m_flags;
+    using PhaseFunction::m_filter;
     using PhaseFunction::m_components;
 };
 
@@ -75,6 +76,8 @@ template <typename Ptr, typename Cls> void bind_phase_generic(Cls &cls) {
             D(PhaseFunction, max_projected_area))
        .def("flags", [](Ptr ptr, Mask active) { return ptr->flags(active); },
             "active"_a = true, D(PhaseFunction, flags))
+       .def("filter", [](Ptr ptr, Mask active) { return ptr->filter(active); },
+            "active"_a = true, D(PhaseFunction, filter))
        .def("component_count", [](Ptr ptr, Mask active) { return ptr->component_count(active); },
             "active"_a = true, D(PhaseFunction, component_count));
 
@@ -111,6 +114,13 @@ MI_PY_EXPORT(PhaseFunction) {
                 [](PyPhaseFunction &phase, uint32_t flags){
                     phase.m_flags = flags;
                     dr::set_attr(&phase, "flags", flags);
+                }
+            )
+            .def_property("m_filter",
+                [](PyPhaseFunction &phase){ return phase.m_filter; },
+                [](PyPhaseFunction &phase, uint32_t filter){
+                    phase.m_filter = filter;
+                    dr::set_attr(&phase, "filter", filter);
                 }
             )
             .def("__repr__", &PhaseFunction::to_string);

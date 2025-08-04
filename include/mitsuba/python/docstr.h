@@ -2826,7 +2826,9 @@ static const char *__doc_mitsuba_FilterBoundaryCondition_Repeat = R"doc(Assume t
 
 static const char *__doc_mitsuba_FilterBoundaryCondition_Zero = R"doc(Assume that the input function is zero outside of the defined domain)doc";
 
-static const char *__doc_mitsuba_FilterType = R"doc()doc";
+static const char *__doc_mitsuba_FilterType =
+R"doc(This enum is used to specify whether a feature contributes to the path
+interaction or not.)doc";
 
 static const char *__doc_mitsuba_FilterType_Ignore = R"doc()doc";
 
@@ -5190,6 +5192,8 @@ Returns:
     The value and the sampling PDF of the phase function in direction
     wo)doc";
 
+static const char *__doc_mitsuba_PhaseFunction_filter = R"doc(Flags for all components combined.)doc";
+
 static const char *__doc_mitsuba_PhaseFunction_flags = R"doc(Flags for this phase function.)doc";
 
 static const char *__doc_mitsuba_PhaseFunction_flags_2 = R"doc(Flags for a specific component of this phase function.)doc";
@@ -5197,6 +5201,8 @@ static const char *__doc_mitsuba_PhaseFunction_flags_2 = R"doc(Flags for a speci
 static const char *__doc_mitsuba_PhaseFunction_id = R"doc(Return a string identifier)doc";
 
 static const char *__doc_mitsuba_PhaseFunction_m_components = R"doc(Flags for each component of this phase function.)doc";
+
+static const char *__doc_mitsuba_PhaseFunction_m_filter = R"doc(Filter type for this Phase function)doc";
 
 static const char *__doc_mitsuba_PhaseFunction_m_flags = R"doc(Type of phase function (e.g. anisotropic))doc";
 
@@ -7015,6 +7021,24 @@ static const char *__doc_mitsuba_Sensor_8 = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_9 = R"doc()doc";
 
+static const char *__doc_mitsuba_SensorFilterFlags =
+R"doc(This list of flags is used to control which filters are used for a
+given sensor.)doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_All = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_BSDF = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_Depth = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_None = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_Phase = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_Shape = R"doc()doc";
+
+static const char *__doc_mitsuba_SensorFilterFlags_Surface = R"doc()doc";
+
 static const char *__doc_mitsuba_Sensor_Sensor = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_accumulate = R"doc()doc";
@@ -7032,6 +7056,8 @@ static const char *__doc_mitsuba_Sensor_m_film = R"doc()doc";
 static const char *__doc_mitsuba_Sensor_m_resolution = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_m_sampler = R"doc()doc";
+
+static const char *__doc_mitsuba_Sensor_m_sensor_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_m_shutter_open = R"doc()doc";
 
@@ -7125,6 +7151,8 @@ This is the *root* sampler, which will later be cloned a number of
 times to provide each participating worker thread with its own
 instance (see Scene::sampler()). Therefore, this sampler should never
 be used for anything except creating clones.)doc";
+
+static const char *__doc_mitsuba_Sensor_sensor_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_shutter_open = R"doc(Return the time value of the shutter opening event)doc";
 
@@ -9904,6 +9932,8 @@ if this is required by the BSDF (e.g. for texture filtering).
 
 Implementation in 'bsdf.h')doc";
 
+static const char *__doc_mitsuba_bsdf_filter = R"doc()doc";
+
 static const char *__doc_mitsuba_build_gas =
 R"doc(Build OptiX geometry acceleration structures (GAS) for a given list of
 shapes.
@@ -9962,6 +9992,8 @@ Apart from the obvious usecase as a depolarizing Mueller matrix (e.g.
 for a Lambertian diffuse material), this is also currently used in
 many BSDFs and emitters where it is not clear how they should interact
 with polarization.)doc";
+
+static const char *__doc_mitsuba_depth_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_detail_CIE1932Tables =
 R"doc(Struct carrying color space tables with fits for cie1931_xyz and
@@ -10490,6 +10522,8 @@ static const char *__doc_mitsuba_has_flag_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_has_flag_10 = R"doc()doc";
 
+static const char *__doc_mitsuba_has_flag_11 = R"doc()doc";
+
 static const char *__doc_mitsuba_hash = R"doc()doc";
 
 static const char *__doc_mitsuba_hash_2 = R"doc()doc";
@@ -10876,6 +10910,8 @@ static const char *__doc_mitsuba_operator_add_10 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_add_11 = R"doc()doc";
 
+static const char *__doc_mitsuba_operator_add_12 = R"doc()doc";
+
 static const char *__doc_mitsuba_operator_band = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_band_2 = R"doc()doc";
@@ -10916,6 +10952,10 @@ static const char *__doc_mitsuba_operator_band_19 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_band_20 = R"doc()doc";
 
+static const char *__doc_mitsuba_operator_band_21 = R"doc()doc";
+
+static const char *__doc_mitsuba_operator_band_22 = R"doc()doc";
+
 static const char *__doc_mitsuba_operator_bnot = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_bnot_2 = R"doc()doc";
@@ -10935,6 +10975,8 @@ static const char *__doc_mitsuba_operator_bnot_8 = R"doc()doc";
 static const char *__doc_mitsuba_operator_bnot_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_bnot_10 = R"doc()doc";
+
+static const char *__doc_mitsuba_operator_bnot_11 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_bor = R"doc()doc";
 
@@ -10975,6 +11017,10 @@ static const char *__doc_mitsuba_operator_bor_18 = R"doc()doc";
 static const char *__doc_mitsuba_operator_bor_19 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_bor_20 = R"doc()doc";
+
+static const char *__doc_mitsuba_operator_bor_21 = R"doc()doc";
+
+static const char *__doc_mitsuba_operator_bor_22 = R"doc()doc";
 
 static const char *__doc_mitsuba_operator_lshift = R"doc(Print a string representation of the bounding box)doc";
 
@@ -11103,6 +11149,8 @@ Returns:
 static const char *__doc_mitsuba_perspective_projection =
 R"doc(Helper function to create a perspective projection transformation
 matrix)doc";
+
+static const char *__doc_mitsuba_phase_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_prepare_ias =
 R"doc(Prepares and fills the OptixInstance array associated with a given
@@ -11443,6 +11491,8 @@ Returns:
     normals)doc";
 
 static const char *__doc_mitsuba_sggx_sample_2 = R"doc()doc";
+
+static const char *__doc_mitsuba_shape_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_sobol_2 = R"doc(Sobol' radical inverse in base 2)doc";
 

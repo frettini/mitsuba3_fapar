@@ -201,12 +201,17 @@ public:
     /// Set a string identifier
     void set_id(const std::string& id) override { m_id = id; };
 
+    /// Flags for all components combined.
+    uint32_t filter(Mask /*active*/ = true) const { return m_filter; }
+
     /// Return a human-readable representation of the phase function
     std::string to_string() const override = 0;
 
     //! @}
     // -----------------------------------------------------------------------
 
+    void traverse(TraversalCallback *callback) override;
+    
     DRJIT_VCALL_REGISTER(Float, mitsuba::PhaseFunction)
 
     MI_DECLARE_CLASS()
@@ -223,6 +228,9 @@ protected:
 
     /// Identifier (if available)
     std::string m_id;
+
+    /// Filter type for this Phase function
+    uint32_t m_filter;
 };
 
 MI_VARIANT
@@ -255,6 +263,7 @@ DRJIT_VCALL_TEMPLATE_BEGIN(mitsuba::PhaseFunction)
     DRJIT_VCALL_METHOD(max_projected_area)
     DRJIT_VCALL_GETTER(flags, uint32_t)
     DRJIT_VCALL_GETTER(component_count, size_t)
+    DRJIT_VCALL_GETTER(filter, uint32_t)
 DRJIT_VCALL_TEMPLATE_END(mitsuba::PhaseFunction)
 
 //! @}
