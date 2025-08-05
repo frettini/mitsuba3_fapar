@@ -128,6 +128,7 @@ public:
         BSDFContext   bsdf_ctx;
 
         UInt32 sensor_filter = +SensorFilterFlags::Surface;
+        MediumInteraction3f mei = dr::zeros<MediumInteraction3f>();
 
         /* Set up a Dr.Jit loop. This optimizes away to a normal loop in scalar
            mode, and it generates either a a megakernel (default) or
@@ -180,7 +181,7 @@ public:
                 // pass &= bsdf_filter(si);
                  Mask pass = active;
                 pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
-                pass &= bsdf_filter(si, sensor_filter);
+                pass &= bsdf_filter(si, mei, sensor_filter);
 
                 // Accumulate, being careful with polarization (see spec_fma)
                 result[pass] = spec_fma(
@@ -204,7 +205,7 @@ public:
             // @FILTER ============================ 
             Mask pass = active;
             pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
-            pass &= bsdf_filter(si, sensor_filter);
+            pass &= bsdf_filter(si, mei, sensor_filter);
 
             // Perform emitter sampling?
             Mask active_em = active_next && has_flag(bsdf->flags(), BSDFFlags::Smooth) && pass;
