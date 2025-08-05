@@ -5164,7 +5164,7 @@ static const char *__doc_mitsuba_PhaseFunctionFlags_Isotropic = R"doc()doc";
 
 static const char *__doc_mitsuba_PhaseFunctionFlags_Microflake = R"doc()doc";
 
-static const char *__doc_mitsuba_PhaseFunction_PhaseFunction = R"doc(//! @})doc";
+static const char *__doc_mitsuba_PhaseFunction_PhaseFunction = R"doc()doc";
 
 static const char *__doc_mitsuba_PhaseFunction_class = R"doc()doc";
 
@@ -5261,6 +5261,8 @@ Returns:
 static const char *__doc_mitsuba_PhaseFunction_set_id = R"doc(Set a string identifier)doc";
 
 static const char *__doc_mitsuba_PhaseFunction_to_string = R"doc(Return a human-readable representation of the phase function)doc";
+
+static const char *__doc_mitsuba_PhaseFunction_traverse = R"doc(//! @})doc";
 
 static const char *__doc_mitsuba_PluginManager =
 R"doc(The object factory is responsible for loading plugin modules and
@@ -7031,6 +7033,8 @@ static const char *__doc_mitsuba_SensorFilterFlags_BSDF = R"doc()doc";
 
 static const char *__doc_mitsuba_SensorFilterFlags_Depth = R"doc()doc";
 
+static const char *__doc_mitsuba_SensorFilterFlags_Exclusif = R"doc()doc";
+
 static const char *__doc_mitsuba_SensorFilterFlags_None = R"doc()doc";
 
 static const char *__doc_mitsuba_SensorFilterFlags_Phase = R"doc()doc";
@@ -7497,6 +7501,8 @@ mapping is bijective. The default implementation throws.)doc";
 
 static const char *__doc_mitsuba_Shape_exterior_medium = R"doc(Return the medium that lies on the exterior of this shape)doc";
 
+static const char *__doc_mitsuba_Shape_filter = R"doc()doc";
+
 static const char *__doc_mitsuba_Shape_get_children_string = R"doc()doc";
 
 static const char *__doc_mitsuba_Shape_has_attribute =
@@ -7547,6 +7553,8 @@ static const char *__doc_mitsuba_Shape_m_discontinuity_types = R"doc()doc";
 static const char *__doc_mitsuba_Shape_m_emitter = R"doc()doc";
 
 static const char *__doc_mitsuba_Shape_m_exterior_medium = R"doc()doc";
+
+static const char *__doc_mitsuba_Shape_m_filter = R"doc()doc";
 
 static const char *__doc_mitsuba_Shape_m_id = R"doc()doc";
 

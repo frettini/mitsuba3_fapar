@@ -5,6 +5,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/phase.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/interaction.h>
 
 NAMESPACE_BEGIN(mitsuba)
@@ -39,6 +40,9 @@ enum class SensorFilterFlags : uint32_t {
 
 MI_DECLARE_ENUM_OPERATORS(SensorFilterFlags)
 
+/**
+ * \brief Depth filter
+ */
 template <typename UInt32>
 dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
                                 UInt32 max_depth, UInt32 filter_flags) {
@@ -59,6 +63,9 @@ dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
     return valid;
 }
 
+/**
+ * \brief BSDF filter
+ */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
                               const MediumInteraction<Float, Spectrum> &mei,
@@ -87,6 +94,9 @@ dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
     return valid;
 }
 
+/**
+ * \brief Shape filter
+ */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
                                const MediumInteraction<Float, Spectrum> &mei,
@@ -115,6 +125,9 @@ dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
     return valid;
 }
 
+/**
+ * \brief Phase filter
+ */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> phase_filter(const SurfaceInteraction<Float, Spectrum> &si,
                                const MediumInteraction<Float, Spectrum> &mei,
