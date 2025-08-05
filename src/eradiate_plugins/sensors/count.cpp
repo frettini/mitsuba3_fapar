@@ -63,7 +63,7 @@ public:
         m_needs_sample_2 = false;
         m_needs_sample_3 = false;
 
-        m_sensor_filter = +SensorFilterFlags::All;
+        m_sensor_filter = +SensorFilterFlags::All | +SensorFilterFlags::Exclusif;
     }
 
     void set_scene(const Scene *scene) override {
@@ -104,12 +104,13 @@ public:
         Mask active = true
     ) override {
         
-        Mask accumulate = active && filter && si.is_valid();
+        Mask accumulate = active && filter && (si.is_valid() || mei.is_valid());
 
         if (dr::any_or<true>(accumulate)) {
             
             // Calculate index of current voxel from the interaction point
-            Vector3i current_voxel = Vector3i(dr::floor((si.p - m_bbox.min) / m_voxel_size));
+            Vector3f p = dr::select(si.t < mei.t, si.p, mei.p);
+            Vector3i current_voxel = Vector3i(dr::floor((p - m_bbox.min) / m_voxel_size));
             accumulate &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
             Float current_voxel_flat = current_voxel.x() 
             + current_voxel.y() * m_grid_res.x() 

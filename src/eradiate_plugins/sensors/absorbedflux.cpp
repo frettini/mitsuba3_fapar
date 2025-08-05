@@ -64,7 +64,7 @@ public:
         m_needs_sample_2 = false;
         m_needs_sample_3 = false;
 
-        m_sensor_filter = +SensorFilterFlags::Surface;
+        m_sensor_filter = +SensorFilterFlags::Surface | +SensorFilterFlags::Exclusif;
     }
 
     void set_scene(const Scene *scene) override {
