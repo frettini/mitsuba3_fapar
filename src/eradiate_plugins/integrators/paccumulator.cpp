@@ -540,7 +540,7 @@ public:
             MediumInteraction3f mei = dr::zeros<MediumInteraction3f>();
             if (dr::any_or<true>(active_medium)) {
                 mei = medium->sample_interaction(ray, sampler->next_1d(active_medium), channel, active_medium);
-                Log(Debug, "sampled mei.t: %f", ray.maxt, mei.t);
+                Log(Debug, "sampled mei.t: %f", mei.t);
                 dr::masked(mei.t, active_medium && (si.t < mei.t)) = dr::Infinity<Float>;
                 dr::masked(t, active_medium && mei.t < si.t) = mei.t;
                 
@@ -557,13 +557,42 @@ public:
             }
             Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
+             /* ----------------- Scattering Event Selection ----------------- */
+            // @PONDER: maybe scattering event selection should be done before 
+            // accumulate to filter null scattering events out.
+            if (dr::any_or<true>(active_medium)) {
+                
+                // select scattering event
+                Mask null_scatter = sampler->next_1d(active_medium) >= index_spectrum(mei.sigma_t, channel) / index_spectrum(mei.combined_extinction, channel);
+                Log(Debug, "sigma_t: %f, sigma_maj: %f", mei.sigma_t, mei.combined_extinction);
+                
+                act_null_scatter |= null_scatter && active_medium;
+                act_medium_scatter |= !act_null_scatter && active_medium; 
+
+                // Null scattering: update throughput only for spectral cases
+                if (dr::any_or<true>(is_spectral && act_null_scatter)) {
+                    dr::masked(throughput, is_spectral && act_null_scatter) *=
+                        mei.sigma_n * index_spectrum(mei.combined_extinction, channel) /
+                        index_spectrum(mei.sigma_n, channel);
+                }
+            }
+
             /* ------------------------- Accumulate ------------------------- */
+            
+            // Apply filtering
             Mask pass = active;
-            pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
             // Null interaction are discarded, Periodic bounds have to be Null
-            pass &= bsdf_filter(si, sensor_filter);
-            // pass &= shape_filter(si, sensor_filter);
-            // pass &= phase_filter(mei, sensor_filter);
+            Log(Debug, "active: %d", active);
+            pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
+            Log(Debug, "depth filter: %d", pass);
+            pass &= bsdf_filter(si, mei, sensor_filter);
+            Log(Debug, "bsdf filter: %d", pass);
+            pass &= shape_filter(si, mei, sensor_filter);
+            Log(Debug, "shape filter: %d", pass);
+            pass &= phase_filter(si, mei, sensor_filter);
+            Log(Debug, "phase filter: %d", pass);
+
+            Log(Debug, "active: %d, filter: %d", active, pass);
 
             // Accumulate the ray contribution, could be NEE or other strategies.
             sensor->accumulate(
@@ -577,32 +606,6 @@ public:
                 /*filter=*/pass, 
                 /*active=*/active);
 
-
-            Log(Debug, "active: %d, filter: %d", active, pass);
-
-            /* ----------------- Scattering Event Selection ----------------- */
-            if (dr::any_or<true>(active_medium)) {
-                
-                // select scattering event
-                Mask null_scatter = sampler->next_1d(active_medium) >= index_spectrum(mei.sigma_t, channel) / index_spectrum(mei.combined_extinction, channel);
-                
-                act_null_scatter |= null_scatter && active_medium;
-                act_medium_scatter |= !act_null_scatter && active_medium; 
-
-                // Null scattering: update throughput only for spectral cases
-                if (dr::any_or<true>(is_spectral && act_null_scatter)) {
-                    dr::masked(throughput, is_spectral && act_null_scatter) *=
-                        mei.sigma_n * index_spectrum(mei.combined_extinction, channel) /
-                        index_spectrum(mei.sigma_n, channel);
-                }
-
-                // Real scattering: update throughput
-                if (dr::any_or<true>(is_spectral))
-                    dr::masked(throughput, is_spectral && act_medium_scatter) *=
-                        mei.sigma_s * index_spectrum(mei.combined_extinction, channel) / index_spectrum(mei.sigma_t, channel);
-                if (dr::any_or<true>(not_spectral))
-                    dr::masked(throughput, not_spectral && act_medium_scatter) *= mei.sigma_s / mei.sigma_t;
-            }
 
             dr::masked(depth, act_medium_scatter) += 1;
             active &= depth < (uint32_t) m_max_depth;
@@ -620,6 +623,13 @@ public:
             }
 
             if (dr::any_or<true>(act_medium_scatter)) {
+                // Real scattering: update throughput
+                if (dr::any_or<true>(is_spectral))
+                    dr::masked(throughput, is_spectral && act_medium_scatter) *=
+                        mei.sigma_s * index_spectrum(mei.combined_extinction, channel) / index_spectrum(mei.sigma_t, channel);
+                if (dr::any_or<true>(not_spectral))
+                    dr::masked(throughput, not_spectral && act_medium_scatter) *= mei.sigma_s / mei.sigma_t;
+
             /* ----------------------- Phase sampling ----------------------- */
                 PhaseFunctionContext phase_ctx(sampler);
                 auto phase = mei.medium->phase_function();
