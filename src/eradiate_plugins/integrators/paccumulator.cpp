@@ -434,7 +434,6 @@ public:
         auto [ray, ray_weight, emitter] = scene->sample_emitter_ray(
             time, wavelength_sample, direction_sample, position_sample);
         MediumPtr medium = emitter->medium();
-        Log(Debug, "is medium not a nullptr: %f", dr::neq(medium, nullptr));
         return { ray, ray_weight, medium };
     }
 
@@ -558,8 +557,6 @@ public:
             Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
              /* ----------------- Scattering Event Selection ----------------- */
-            // @PONDER: maybe scattering event selection should be done before 
-            // accumulate to filter null scattering events out.
             if (dr::any_or<true>(active_medium)) {
                 
                 // select scattering event
@@ -582,15 +579,10 @@ public:
             // Apply filtering
             Mask pass = active;
             // Null interaction are discarded, Periodic bounds have to be Null
-            Log(Debug, "active: %d", active);
             pass &= depth_filter(depth, UInt32(m_min_depth), UInt32(m_max_depth), sensor_filter);
-            Log(Debug, "depth filter: %d", pass);
             pass &= bsdf_filter(si, mei, sensor_filter);
-            Log(Debug, "bsdf filter: %d", pass);
             pass &= shape_filter(si, mei, sensor_filter);
-            Log(Debug, "shape filter: %d", pass);
             pass &= phase_filter(si, mei, sensor_filter);
-            Log(Debug, "phase filter: %d", pass);
 
             Log(Debug, "active: %d, filter: %d", active, pass);
 
@@ -732,26 +724,6 @@ public:
 
         return { throughput, 1.f };
     }
-
-    // /**
-    //  * \brief accumulate the values that pass the filters
-    //  */
-    // Mask order_filter(const UInt32& depth) const {
-    //     // filtered value
-    //     Mask pass = depth >= m_min_depth && depth < m_max_depth;
-    //     return pass;
-        
-    // }
-
-    // Mask bsdf_filter(const SurfaceInteraction3f& si) const {
-    //     Mask pass(true);
-    //     if (dr::none_or<false>(si.is_valid()))
-    //         return pass;
-    //     BSDFPtr bsdf = si.bsdf();
-    //     pass &= dr::eq(bsdf->filter(), +FilterType::Include);
-    //     pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);
-    //     return pass;
-    // }
 
     //! @}
     // =============================================================
