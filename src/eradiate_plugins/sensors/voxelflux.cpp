@@ -119,7 +119,7 @@ public:
         Float maxt_box = dr::min(dr::maximum(t_bmin, t_bmax));
 
         // Offset the start distance so that it we can account the first voxel face.
-        Float maxt = si.t;
+        Float maxt = dr::select(si.t < mei.t, si.t, mei.t);
         Float t_start = mint_box - math::RayEpsilon<Float>;
         Float t_end = dr::minimum(maxt_box, maxt); 
         Float t = t_start;
