@@ -543,11 +543,7 @@ public:
                 dr::masked(mei.t, active_medium && (si.t < mei.t)) = dr::Infinity<Float>;
                 dr::masked(t, active_medium && mei.t < si.t) = mei.t;
                 
-                if (dr::any_or<true>(is_spectral)) {
-                    auto [tr, free_flight_pdf] = medium->transmittance_eval_pdf(mei, si, is_spectral);
-                    Float tr_pdf = index_spectrum(free_flight_pdf, channel);
-                    dr::masked(throughput, is_spectral) *= dr::select(tr_pdf > 0.f, tr / tr_pdf, 0.f);
-                }
+              
 
                 escaped_medium = active_medium && !mei.is_valid();
                 active_medium &= mei.is_valid();
@@ -556,23 +552,7 @@ public:
             }
             Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
-             /* ----------------- Scattering Event Selection ----------------- */
-            if (dr::any_or<true>(active_medium)) {
-                
-                // select scattering event
-                Mask null_scatter = sampler->next_1d(active_medium) >= index_spectrum(mei.sigma_t, channel) / index_spectrum(mei.combined_extinction, channel);
-                Log(Debug, "sigma_t: %f, sigma_maj: %f", mei.sigma_t, mei.combined_extinction);
-                
-                act_null_scatter |= null_scatter && active_medium;
-                act_medium_scatter |= !act_null_scatter && active_medium; 
-
-                // Null scattering: update throughput only for spectral cases
-                if (dr::any_or<true>(is_spectral && act_null_scatter)) {
-                    dr::masked(throughput, is_spectral && act_null_scatter) *=
-                        mei.sigma_n * index_spectrum(mei.combined_extinction, channel) /
-                        index_spectrum(mei.sigma_n, channel);
-                }
-            }
+            
 
             /* ------------------------- Accumulate ------------------------- */
             
@@ -608,20 +588,51 @@ public:
             // early exit
             if (dr::none_or<false>(active))
                 break;
+                
+            /* ----------------- Scattering Event Selection ----------------- */
+            if (dr::any_or<true>(active_medium)) {
+                  if (dr::any_or<true>(is_spectral)) {
+                    auto [tr, free_flight_pdf] = medium->transmittance_eval_pdf(mei, si, is_spectral);
+                    Float tr_pdf = index_spectrum(free_flight_pdf, channel);
+                    dr::masked(throughput, is_spectral) *= dr::select(tr_pdf > 0.f, mei.combined_extinction*tr / tr_pdf, 0.f);
+                    Log(Debug, "Spectral | tr: %f, tr_pdf: %f, throughput: %f", tr, tr_pdf, throughput);
+                }
+                
+                // select scattering event
+                Mask null_scatter = sampler->next_1d(active_medium) >= index_spectrum(mei.sigma_t, channel) / index_spectrum(mei.combined_extinction, channel);
+                Log(Debug, "sigma_t: %f, sigma_maj: %f", mei.sigma_t, mei.combined_extinction);
+                
+                act_null_scatter |= null_scatter && active_medium;
+                act_medium_scatter |= !act_null_scatter && active_medium; 
 
+                // Null scattering: update throughput only for spectral cases
+                if (dr::any_or<true>(is_spectral && act_null_scatter)) {
+                    dr::masked(throughput, is_spectral && act_null_scatter) *=
+                        mei.sigma_n * index_spectrum(mei.combined_extinction, channel) /
+                        (index_spectrum(mei.sigma_n, channel)*mei.combined_extinction);
+                }
+                 
+            }
             if (dr::any_or<true>(act_null_scatter)) {
                 dr::masked(ray.o, act_null_scatter) = mei.p;
                 // dr::masked(si.t, act_null_scatter) = si.t - mei.t; // useful when optmizing the ray intersections
             }
 
             if (dr::any_or<true>(act_medium_scatter)) {
+               
                 // Real scattering: update throughput
-                if (dr::any_or<true>(is_spectral))
-                    dr::masked(throughput, is_spectral && act_medium_scatter) *=
-                        mei.sigma_s * index_spectrum(mei.combined_extinction, channel) / index_spectrum(mei.sigma_t, channel);
-                if (dr::any_or<true>(not_spectral))
-                    dr::masked(throughput, not_spectral && act_medium_scatter) *= mei.sigma_s / mei.sigma_t;
+                if (dr::any_or<true>(is_spectral)) {
+                    Spectrum mul = mei.sigma_s * index_spectrum(mei.combined_extinction, channel) / (index_spectrum(mei.sigma_t, channel)*mei.combined_extinction); 
+                    dr::masked(throughput, is_spectral && act_medium_scatter) *= mul;
+                    Log(Debug, "Spectral Scattering throughput mul: %f", mul);
+                }
+                if (dr::any_or<true>(not_spectral)) {
+                    Spectrum mul = mei.sigma_s / mei.sigma_t; 
+                    dr::masked(throughput, not_spectral && act_medium_scatter) *= mul;
+                    Log(Debug, "Non Spectral Scattering throughput mul: %f", mul);
 
+                }    
+            
             /* ----------------------- Phase sampling ----------------------- */
                 PhaseFunctionContext phase_ctx(sampler);
                 auto phase = mei.medium->phase_function();
