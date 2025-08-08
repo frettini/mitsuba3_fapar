@@ -201,7 +201,7 @@ public:
     /// Set a string identifier
     void set_id(const std::string& id) override { m_id = id; };
 
-    /// Flags for all components combined.
+    /// Return the filter type.
     uint32_t filter(Mask /*active*/ = true) const { return m_filter; }
 
     /// Return a human-readable representation of the phase function

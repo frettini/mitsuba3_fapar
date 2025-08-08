@@ -831,6 +831,7 @@ public:
      */
     virtual ScalarSize effective_primitive_count() const;
 
+    /// Return the filter type.
     uint32_t filter(Mask /*active*/ = true) const { return m_filter; }
 
 #if defined(MI_ENABLE_EMBREE)
