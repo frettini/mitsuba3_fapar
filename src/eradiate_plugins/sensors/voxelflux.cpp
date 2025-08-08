@@ -40,20 +40,51 @@ VoxelFlux sensor (:monosp:`voxelflux`)
  * - surface_flux
    - |bool|
    - Specifies if the measured quantity is a surface flux or a flux. For surface
-    fluxes, the foreshortening factor is multiplied to the accumulated flux.
+     fluxes, the foreshortening factor is multiplied to the accumulated flux. 
+     (Default: false)
    - —
 
  * - apply_sample_scale
    - |bool|
-   - *Debug* Apply the sample scale to the recorded value.
+   - *Debug* Apply the sample scale to the recorded value. (Default: true)
    - —
 
 This sensor measures the flux that traverses voxel faces. It keeps track of 
 the direction and magnitude of the flux that traverses each voxel face. Note 
 that the underlying film will have the following shape:
-    [3, res_x+1, res_y+1, res_z+z, 2]
-The first dimension indicates the axis, the following three indicate the faces,
-and the last indicate the direction with 1 for positive and 0 for negative.
+    [D, F, X, Y, Z ]
+    [2, 3, res_x+1, res_y+1, res_z+z]
+with:
+- D : the flux direction relative to the axis; 0 for negative, 1 for positive.
+- F : the axis of the faces. 
+- X,Y,Z : the index of the face. Note that those dimensions are padded so that
+there always is an extra element for axis that do not correspond to F. For 
+example for F=0, the size of X is res_x+1 and the size of Y and Z are res_y and 
+res_z.
+
+.. tabs::
+    .. code-tab::  xml
+
+        <film type="voxelflux">
+            <string name="bbmox_min" value="-1, -1, -1"/>
+            <string name="bbmox_max" value="1, 1, 1"/>
+            <integer name="resx" value="1"/>
+            <integer name="resy" value="1"/>
+            <integer name="resz" value="1"/>
+            <boolean name="surface_flux" value="false"/>
+            <integer name="apply_sample_scale" value="true"/>
+        </film>
+
+    .. code-tab:: python
+
+        'type': 'voxelflux',
+        'resx': 1,
+        'resy': 1,
+        'resz': 1,
+        'bbmox_min':[-1,-1,-1],
+        'bbmox_max':[-1,-1,-1],
+        'surface_flux':False,
+        'apply_sample_scale':True,
 */
 
 template <typename Float, typename Spectrum>
@@ -87,9 +118,9 @@ public:
             ScalarUInt32 resy = props.get<ScalarUInt32>("res_y", 1);
             ScalarUInt32 resz = props.get<ScalarUInt32>("res_z", 1);
             
-            std::string sizes = "3, " + std::to_string(resx + 1) + ", " +
+            std::string sizes = "2, 3, " + std::to_string(resx + 1) + ", " +
                                 std::to_string(resy + 1) + ", " +
-                                std::to_string(resz + 1) + ", 2";
+                                std::to_string(resz + 1);
             // Instantiate a tensor film with corresponding size
             Properties props_film("tensorfilm");
             props_film.set_int("ndims",5);
@@ -122,10 +153,10 @@ public:
                                          s_bbox.max + dr::Epsilon<Point3f> );
         } 
 
-        // expecting the film to be of shape 3xNxMxOx2.
+        // expecting the film to be of shape 2x3xNxMxO.
         // TODO: add checks
-        for(ScalarUInt32 i = 1; i < 4; ++i) {
-            m_grid_res[i-1] = m_film->size(i)-1;
+        for(ScalarUInt32 i = 2; i < 5; ++i) {
+            m_grid_res[i-2] = m_film->size(i)-1;
         } 
         m_voxel_size = m_bbox.extents() / ScalarVector3f(m_grid_res);
 
@@ -193,10 +224,12 @@ public:
         
         const ScalarVector3i face_index(0,1,2);
 
-        UInt32 stride_z = 2; 
+        // For shape [D, F, X, Y, Z] with D=2, F=3, X=(res_x+1), Y=(res_y+1), Z=(res_z+1)
+        UInt32 stride_z = 1;
         UInt32 stride_y = stride_z * (m_grid_res.z() + 1);
         UInt32 stride_x = stride_y * (m_grid_res.y() + 1);
         UInt32 stride_f = stride_x * (m_grid_res.x() + 1);
+        UInt32 stride_d = stride_f * 3;
 
         // UInt32 stride_x = 2;
         // UInt32 stride_y = stride_x * (m_grid_res.x() + 1);
@@ -239,7 +272,7 @@ public:
             Vector3i current_face = dr::select(mask && (step_dir > 0), current_voxel + 1, current_voxel);
             Log(Debug, "current_voxel: %f, current_face: %f", current_voxel, current_face);
 
-            UInt32 current_voxel_flat = d 
+            UInt32 current_voxel_flat = d * stride_d 
                                        + current_face.x() * stride_x
                                        + current_face.y() * stride_y
                                        + current_face.z() * stride_z
