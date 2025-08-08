@@ -2,6 +2,7 @@
 #include <mitsuba/core/bbox.h>
 #include <mitsuba/core/bsphere.h>
 #include <mitsuba/core/math.h>
+#include <mitsuba/core/plugin.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/transform.h>
@@ -10,6 +11,9 @@
 #include <mitsuba/render/sensor.h>
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/filter.h>
+
+#include <string>
+#include <format>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -24,8 +28,19 @@ VoxelFlux sensor (:monosp:`voxelflux`)
 
  * - bbox_min, bbox_max
    - |point|
-   - *Subject to Change* Bounding box of the sensor. If not set, the sensor will use the scene's
+   - Bounding box of the sensor. If not set, the sensor will use the scene's
      bounding box. Film resolution is set to the number of voxels in the bounding box.
+   - —
+
+ * - resx, resy, resz
+   - |int|
+   - Number of voxels per dimension. Note that setting any of those parameters 
+    will overwrite the film plugin passed to this sensor. (Default: 1, 1, 1)
+
+ * - surface_flux
+   - |bool|
+   - Specifies if the measured quantity is a surface flux or a flux. For surface
+    fluxes, the foreshortening factor is multiplied to the accumulated flux.
    - —
 
  * - apply_sample_scale
@@ -34,7 +49,11 @@ VoxelFlux sensor (:monosp:`voxelflux`)
    - —
 
 This sensor measures the flux that traverses voxel faces. It keeps track of 
-the direction and magnitude of the flux that traverses each voxel face.
+the direction and magnitude of the flux that traverses each voxel face. Note 
+that the underlying film will have the following shape:
+    [3, res_x+1, res_y+1, res_z+z, 2]
+The first dimension indicates the axis, the following three indicate the faces,
+and the last indicate the direction with 1 for positive and 0 for negative.
 */
 
 template <typename Float, typename Spectrum>
@@ -42,7 +61,7 @@ class VoxelFluxSensor final : public Sensor<Float, Spectrum> {
 public:
     MI_IMPORT_BASE(Sensor, m_to_world, m_film, m_needs_sample_2,
                    m_needs_sample_3, m_sensor_filter)
-    MI_IMPORT_TYPES(Scene, Shape, BSDF, BSDFPtr)
+    MI_IMPORT_TYPES(Scene, Shape, BSDF, BSDFPtr, Film)
 
     using Matrix = dr::Matrix<Float, Transform4f::Size>;
     using Index = dr::int32_array_t<Float>;
@@ -60,6 +79,25 @@ public:
             m_bbox = ScalarBoundingBox3f(bbox_min, bbox_max);
         }
 
+        auto pmgr = PluginManager::instance();
+        if (props.has_property("res_x") 
+            || props.has_property("res_y") 
+            || props.has_property("res_z")) {
+            ScalarUInt32 resx = props.get<ScalarUInt32>("res_x", 1);
+            ScalarUInt32 resy = props.get<ScalarUInt32>("res_y", 1);
+            ScalarUInt32 resz = props.get<ScalarUInt32>("res_z", 1);
+            
+            std::string sizes = "3, " + std::to_string(resx + 1) + ", " +
+                                std::to_string(resy + 1) + ", " +
+                                std::to_string(resz + 1) + ", 2";
+            // Instantiate a tensor film with corresponding size
+            Properties props_film("tensorfilm");
+            props_film.set_int("ndims",5);
+            props_film.set_string("sizes", sizes);
+            m_film = static_cast<Film *>(pmgr->create_object<Film>(props_film));
+        }
+
+        m_surface_flux = props.get<bool>("surface_flux", false);
         m_apply_sample_scale = props.get<bool>("apply_sample_scale", true);
 
         m_needs_sample_2 = false;
@@ -211,8 +249,12 @@ public:
             if constexpr (!is_polarized_v<Spectrum>){
                 Float cos_theta = dr::sum(dr::select(mask, dr::abs(ray.d), 0));
                 Log(Debug, "flux: %f, cos_theta : %f", flux, cos_theta);
-                // m_film->write_tensor(flux[0] * cos_theta, current_voxel_flat, active && filter);
-                m_film->write_tensor(flux[0], current_voxel_flat, active);
+                
+                m_film->write_tensor(
+                    dr::select(m_surface_flux, flux[0]*cos_theta, flux[0]), 
+                    current_voxel_flat, 
+                    active && filter
+                );
             }
             // ===========================
 
@@ -232,6 +274,7 @@ public:
         oss << "VoxelFluxSensor[" << std::endl
             << "  film = " << string::indent(m_film) << "," << std::endl
             << "  bbox = " << string::indent(m_bbox) << "," << std::endl
+            << "  surface_flux = " << string::indent(m_surface_flux) << "," << std::endl
             << "  apply_sample_scale = " << string::indent(m_apply_sample_scale) << "," << std::endl;
 
         return oss.str();
@@ -244,6 +287,7 @@ protected:
     ScalarBoundingBox3f m_bbox;
     ScalarVector3i m_grid_res;
     ScalarVector3f m_voxel_size;
+    bool m_surface_flux;
     bool m_apply_sample_scale;
 };
 
