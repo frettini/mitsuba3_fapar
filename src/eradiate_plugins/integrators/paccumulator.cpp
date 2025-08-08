@@ -23,14 +23,15 @@ Particle tracer (:monosp:`paccumulator`)
 
  * - max_depth
    - |int|
-   - Specifies the longest path depth in the generated output image (where -1 corresponds to
-     :math:`\infty`). A value of 1 will only render directly visible light sources. 2 will lead
-     to single-bounce (direct-only) illumination, and so on. (Default: -1)
+   - Specifies the longest path depth in the generated output image (where -1 
+     corresponds to :math:`\infty`). A value of 1 will only render directly 
+     visible light sources. 2 will lead to single-bounce (direct-only) 
+     illumination, and so on. (Default: -1)
 
  * - rr_depth
    - |int|
-   - Specifies the minimum path depth, after which the implementation will start to use the
-     *russian roulette* path termination criterion. (Default: 5)
+   - Specifies the minimum path depth, after which the implementation will start 
+     to use the *russian roulette* path termination criterion. (Default: 5)
 
  * - hide_emitters
    - |bool|
@@ -38,33 +39,64 @@ Particle tracer (:monosp:`paccumulator`)
 
  * - samples_per_pass
    - |bool|
-   - If specified, divides the workload in successive passes with :paramtype:`samples_per_pass`
-     samples per pixel.
+   - If specified, divides the workload in successive passes with 
+     :paramtype:`samples_per_pass` samples per pixel.
 
-This integrator traces rays starting from light sources and attempts to connect them
-to the sensor at each bounce.
-It does not support media (volumes).
+ * - periodic_box
+   - |cube|
+   - Cube which represents the periodic boundary. When specified, rays generated
+     within the cube that exit from one of the lateral faces will come back in
+     from the opposing face. Only cubes that exit from the top or bottom face
+     will be terminated. Note that the material of the cube must be Null and that
+     rays must be generated from within the cube.
+   - |exposed|
 
-Usually, this is a relatively useless rendering technique due to its high variance, but there
-are some cases where it excels. In particular, it does a good job on scenes where most scattering
-events are directly visible to the camera.
+ * - film_scale
+   - |float|
+   - *Debug* Scales the number of samples by the number of pixels or voxels of
+     the sensor. (Default: False)
 
-Note that unlike sensor-based integrators such as :ref:`path <integrator-path>`, it is not
-possible to divide the workload in image-space tiles. The :paramtype:`samples_per_pass` parameter
-allows splitting work in successive passes of the given sample count per pixel. It is particularly
-useful in wavefront mode.
+This integrator traces rays starting from light sources and accumulates a value
+at each interaction. It only supports sensors that implement the function 
+accumulate. It also supports participating media and filtering.
+
+Note that unlike sensor-based integrators such as :ref:`path <integrator-path>`, 
+it is not possible to divide the workload in image-space tiles. The 
+:paramtype:`samples_per_pass` parameter allows splitting work in successive 
+passes of the given sample count per pixel. It is particularly useful in 
+wavefront mode.
 
 .. tabs::
     .. code-tab::  xml
 
+        <shape type="cube" id="periodic_bound">
+            <transform name="to_world">
+                <scale value="12.51 12.51 1.10"/>
+            </transform>    
+            <bsdf type="null"/>
+        </shape>
+
         <integrator type="paccumulator">
             <integer name="max_depth" value="8"/>
+            <ref name="periodic_box" id="periodic_bound"/>
         </integrator>
 
     .. code-tab:: python
 
-        'type': 'paccumulator',
-        'max_depth': 8
+        'periodic_cube':{
+            'type':'cube',
+            'id':'periodic_cube',
+            'material':{'type':'null'},
+        },
+
+        'integrator':{
+            'type': 'paccumulator',
+            'max_depth': 8,
+            'periodic_box':{
+                'type':'ref',
+                'id':'periodic_cube',
+            }
+        }
 
  */
 
@@ -309,7 +341,7 @@ public:
 
         m_samples_per_pass = props.get<uint32_t>("samples_per_pass", (uint32_t) -1);
 
-        m_film_scale = props.get<bool>("film_scale", true);
+        m_film_scale = props.get<bool>("film_scale", false);
     
         int rr_depth = props.get<int>("rr_depth", 5);
         if (rr_depth <= 0)

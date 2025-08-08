@@ -24,9 +24,19 @@ Directional periodic emitter (:monosp:`directionalperiodic`)
      direction.
    - |exposed|, |differentiable|
 
- * - pbox OR pbox_min, pbox_max
-   - |boundingbox| OR |vector|
-   - Periodic box
+ * - pbox_min, pbox_max
+   - |vector|
+   - Bounding box minimum and maximum points that form the periodic boundary.
+     Radiation is emitted from the top face of the bounding box toward the 
+     direction given by `direction` or `to_world`.
+   - |exposed|
+
+ * - periodic_box
+   - |cube|
+   - Alternative (and exclusive) to `pbox_min` and `pbox_max`. Cube which 
+     represents the periodic boundary. Radiation is emitted from the top
+     face of the bounding box toward the direction given by `direction` or 
+     `to_world`.
    - |exposed|
 
  * - to_world
@@ -46,20 +56,40 @@ i.e. :math:`(0, 0, 1)`.
 
 .. tabs::
     .. code-tab:: xml
-        :name: directional-light
+        :name: directionalperiodic-light
 
-        <emitter type="directional">
-            <vector name="direction" value="1.0, 0.0, 0.0"/>
+        <shape type="cube" id="periodic_bound">
+            <transform name="to_world">
+                <scale value="12.51 12.51 1.10"/>
+            </transform>    
+            <bsdf type="null"/>
+        </shape>
+
+        <emitter type="directionalperiodic">
+            <vector name="direction" value="0.0, 0.0, -1.0"/>
             <rgb name="irradiance" value="1.0"/>
+            <ref name="periodic_box" id="periodic_bound"/>
         </emitter>
 
     .. code-tab:: python
 
-        'type': 'directional',
-        'direction': [1.0, 0.0, 0.0],
-        'irradiance': {
-            'type': 'rgb',
-            'value': 1.0,
+        'periodic_cube':{
+            'type':'cube',
+            'id':'periodic_cube',
+            'material':{'type':'null'},
+        },
+
+        'emitter':{
+            'type': 'directionalperiodic',
+            'direction': [0.0, 0.0, -1.0],
+            'irradiance': {
+                'type': 'rgb',
+                'value': 1.0,
+            }
+            'periodic_box':{
+                'type':'ref',
+                'id':'periodic_cube'
+            }
         }
 
 */
@@ -88,8 +118,14 @@ public:
             ScalarPoint3f bbox_min = props.get<ScalarPoint3f>("pbox_min");
             ScalarPoint3f bbox_max = props.get<ScalarPoint3f>("pbox_max");
             m_pbox = ScalarBoundingBox3f(bbox_min, bbox_max);
-        } else if (props.has_property("pbox")) {
-            m_pbox = props.get<ScalarBoundingBox3f>("pbox");
+            
+        } else if (props.has_property("periodic_box")) {
+            auto obj = props.object("periodic_box");
+            Shape *periodic_box = dynamic_cast<Shape *>(obj.get());
+            if (periodic_box) {
+                m_pbox = periodic_box->bbox();
+            }
+
         }
         // Irradiance properties
         m_irradiance = props.texture_d65<Texture>("irradiance", 1.f);
@@ -124,8 +160,7 @@ public:
         const auto trafo = m_to_world.value();
         Vector3f d_global = trafo.transform_affine(Vector3f{ 0.f, 0.f, 1.f });
 
-        // 2. Use area-based sampling of shape
-
+        // 2. Use area-based sampling of the bounding box to face.
         Vector3f extent = m_pbox.extents();
         Point3f origin(
             spatial_sample.x() * extent.x() + m_pbox.min.x(), 
