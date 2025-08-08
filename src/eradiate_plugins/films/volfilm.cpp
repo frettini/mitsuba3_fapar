@@ -22,33 +22,32 @@ Volumetric film (:monosp:`volfilm`)
 .. pluginparameters::
  :extra-rows: 7
 
- * - resx, resy, resz
+ * - res_x, res_y, res_z
    - |int|
    - resolution of the film on x, y, and z axis respectively
 
- * - pixel_format
-   - |string|
-   - Specifies the desired pixel format of output images. The options are :monosp:`luminance`,
-     :monosp:`luminance_alpha`, :monosp:`rgb`, :monosp:`rgba`, :monosp:`xyz` and :monosp:`xyza`.
-     (Default: :monosp:`rgb`)
+This film is a three dimensional voxel film. It allows to write data in a 3D 
+array and therefore doesn't use bitmaps. Note that it currently support a single
+channel only. 
 
-Volumetric film.
+Write operations are done using `write_tensor`. The film can be read
+using `develop`.
 
 .. tabs::
     .. code-tab::  xml
 
         <film type="volfilm">
-            <string name="resx" value="1"/>
-            <string name="resy" value="1"/>
-            <string name="resz" value="1"/>
+            <integer name="resx" value="1"/>
+            <integer name="resy" value="1"/>
+            <integer name="resz" value="1"/>
         </film>
 
     .. code-tab:: python
 
         'type': 'volfilm',
-        'resx': 1,
-        'resy': 1,
-        'resz': 1,
+        'res_x': 1,
+        'res_y': 1,
+        'res_z': 1,
 
  */
 
@@ -62,9 +61,9 @@ public:
     VolFilm(const Properties &props) : Base(props) {
         // Horizontal and vertical film resolution in pixels
         m_res = ScalarVector3u(
-            props.get<uint32_t>("resx", 1),
-            props.get<uint32_t>("resy", 1),
-            props.get<uint32_t>("resz", 1)
+            props.get<uint32_t>("res_x", 1),
+            props.get<uint32_t>("res_y", 1),
+            props.get<uint32_t>("res_z", 1)
         );
 
         m_n_channels = 1;

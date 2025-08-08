@@ -30,7 +30,11 @@ Tensor film (:monosp:`tensorfilm`)
    - |string|
    - size of each dimension of the underlying tensor. (Default:monosp:`1`)
 
-Tensor film.
+This film allows to write to a tensor with arbitrary number of dimensions 
+and sizes. This can be useful to accumulate values in non-standard formats.
+
+Write operations are done using `write_tensor`. The film can be read
+using `develop`.
 
 .. tabs::
     .. code-tab::  xml

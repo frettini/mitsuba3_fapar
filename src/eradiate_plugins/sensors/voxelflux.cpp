@@ -65,7 +65,7 @@ res_z.
 .. tabs::
     .. code-tab::  xml
 
-        <film type="voxelflux">
+        <sensor type="voxelflux">
             <string name="bbmox_min" value="-1, -1, -1"/>
             <string name="bbmox_max" value="1, 1, 1"/>
             <integer name="resx" value="1"/>
@@ -73,7 +73,7 @@ res_z.
             <integer name="resz" value="1"/>
             <boolean name="surface_flux" value="false"/>
             <integer name="apply_sample_scale" value="true"/>
-        </film>
+        </sensor>
 
     .. code-tab:: python
 
@@ -82,7 +82,7 @@ res_z.
         'resy': 1,
         'resz': 1,
         'bbmox_min':[-1,-1,-1],
-        'bbmox_max':[-1,-1,-1],
+        'bbmox_max':[ 1, 1, 1],
         'surface_flux':False,
         'apply_sample_scale':True,
 */
