@@ -131,6 +131,38 @@ public:
      */
     const Sampler *sampler() const { return m_sampler.get(); }
 
+    /**
+     * \brief Accumulate emitted and throughput values to the film given the 
+     * integrator current state.
+     * 
+     * \param ray
+     *     Current ray traversing the scene.
+     * 
+     * \param si
+     *     Surface interaction. Note that it is not necessarily valid.
+     * 
+     * \param mei
+     *     Medium interaction. Note that it is not necessarily valid.
+     * 
+     * \param tmax
+     *     Maximum ray distance. This is equivalent to min(si.t, mei.t). 
+     * 
+     * \param emitted
+     *     The radiance emitted by the source.
+     * 
+     * \param throughput
+     *     The throughput carried by the sample.
+     * 
+     * \param sample_scale
+     *     Factor that accounts for the number of samples taken.
+     * 
+     * \param filter
+     *     Indicates whether this sample passes the filters and should be 
+     *     accumulated. Note, sensors can define sensor filter flags to determine
+     *     which filter affects it.
+     * 
+     * \param active
+     */
     virtual void accumulate(
         const Ray3f &ray,
         const SurfaceInteraction3f &si,

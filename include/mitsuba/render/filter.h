@@ -15,8 +15,8 @@ NAMESPACE_BEGIN(mitsuba)
  * path interaction or not.
  */
 enum class FilterType : uint32_t {
-    Include = 0u, // include as usual
-    Ignore  = 1u  // exclude from accumulation
+    Include = 0u,
+    Ignore  = 1u
 };
 
 MI_DECLARE_ENUM_OPERATORS(FilterType)
@@ -26,7 +26,7 @@ MI_DECLARE_ENUM_OPERATORS(FilterType)
  * given sensor.
  */
 enum class SensorFilterFlags : uint32_t {
-    // No flags set (default value)
+    // No flags means no filter inclusive, meaning all interactions pass.
     None                = 0x00000,
     Depth               = 0x00001,
     BSDF                = 0x00002,
@@ -42,6 +42,7 @@ MI_DECLARE_ENUM_OPERATORS(SensorFilterFlags)
 
 /**
  * \brief Depth filter
+ * Tests that the current depth is within the specific minimum and maximum depth.
  */
 template <typename UInt32>
 dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
@@ -65,6 +66,8 @@ dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
 
 /**
  * \brief BSDF filter
+ * Test that the interaction is a surface interaction and that the bsdf at
+ * interaction has a filter type equal to Include.
  */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
@@ -96,6 +99,8 @@ dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
 
 /**
  * \brief Shape filter
+ * Test that the interaction is a surface interaction and that the shape at
+ * interaction has a filter type equal to Include.
  */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
@@ -127,6 +132,8 @@ dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
 
 /**
  * \brief Phase filter
+ * Test that the interaction is a medium interaction and that the phase at
+ * interaction has a filter type equal to Include.
  */
 template <typename Float, typename Spectrum>
 dr::mask_t<Float> phase_filter(const SurfaceInteraction<Float, Spectrum> &si,
