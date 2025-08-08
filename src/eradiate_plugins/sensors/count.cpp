@@ -23,7 +23,7 @@ Count sensor (:monosp:`count`)
 
  * - bbox_min, bbox_max
    - |point|
-   - *Subject to Change* Bounding box of the sensor. If not set, the sensor will use the scene's
+   - Bounding box of the sensor. If not set, the sensor will use the scene's
      bounding box. Film resolution is set to the number of voxels in the bounding box.
    - —
 
@@ -32,7 +32,25 @@ Count sensor (:monosp:`count`)
    - *Debug* Apply the sample scale to the recorded value.
    - —
 
-This sensor plugin counts the number of rays that hit a given region of the scene.
+This sensor plugin counts the number of non-null interactions in a voxel grid.
+The number of voxels is defined by the film resolution and the bounding box
+by `bbox_min` and `bbox_max`.
+
+.. tabs::
+    .. code-tab::  xml
+
+        <sensor type="count">
+            <string name="bbmox_min" value="-1, -1, -1"/>
+            <string name="bbmox_max" value="1, 1, 1"/>
+            <integer name="apply_sample_scale" value="true"/>
+        </sensor>
+
+    .. code-tab:: python
+
+        'type': 'count',
+        'bbmox_min':[-1,-1,-1],
+        'bbmox_max':[ 1, 1, 1],
+        'apply_sample_scale':True,
 */
 
 template <typename Float, typename Spectrum>
