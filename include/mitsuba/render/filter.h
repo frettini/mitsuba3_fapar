@@ -42,7 +42,8 @@ MI_DECLARE_ENUM_OPERATORS(SensorFilterFlags)
 
 /**
  * \brief Depth filter
- * Tests that the current depth is within the specific minimum and maximum depth.
+ * Tests that the current depth is within the specific minimum and maximum
+ * depth.
  */
 template <typename UInt32>
 dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
@@ -52,15 +53,15 @@ dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
 
     Mask valid = false, pass = true;
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Depth);
-    Mask exclusif = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
 
-    if (dr::any_or<true>(include_filter)){
-        pass = depth >= min_depth && depth < max_depth;
+    if (dr::any_or<true>(include_filter)) {
+        pass  = depth >= min_depth && depth < max_depth;
         valid = pass && include_filter;
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif; 
+    valid |= !include_filter && !exclusif;
     return valid;
 }
 
@@ -76,22 +77,22 @@ dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
     MI_IMPORT_TYPES(BSDFPtr)
 
     Mask valid = false, pass = true;
-    
+
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::BSDF);
-    Mask exclusif = has_flag(filter_flags, SensorFilterFlags::Exclusif);
-    Mask is_surface = si.is_valid() && si.t < mei.t;
+    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask is_surface     = si.is_valid() && si.t < mei.t;
 
     if (dr::any_or<false>(!is_surface))
         return true;
 
-    if (dr::any_or<true>(include_filter)){
+    if (dr::any_or<true>(include_filter)) {
         BSDFPtr bsdf = si.bsdf();
         pass &= dr::eq(bsdf->filter(), +FilterType::Include);
-        pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);    
+        pass &= !has_flag(bsdf->flags(), BSDFFlags::Null);
         valid = pass && include_filter;
     }
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif; 
+    valid |= !include_filter && !exclusif;
     // Check whether this is a surface interaction, return true if not
     valid |= !is_surface;
     return valid;
@@ -109,22 +110,22 @@ dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
     MI_IMPORT_TYPES(ShapePtr)
 
     Mask valid = false, pass = true;
-    
+
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Shape);
-    Mask exclusif = has_flag(filter_flags, SensorFilterFlags::Exclusif);
-    Mask is_surface = si.is_valid() && si.t < mei.t;
-    
+    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask is_surface     = si.is_valid() && si.t < mei.t;
+
     if (dr::any_or<false>(!is_surface))
         return true;
 
-    if (dr::any_or<true>(include_filter)){
+    if (dr::any_or<true>(include_filter)) {
         ShapePtr shape = si.shape;
         pass &= dr::eq(shape->filter(), +FilterType::Include);
         valid = pass && include_filter;
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif; 
+    valid |= !include_filter && !exclusif;
     // Check whether this is a surface interaction, return true if not
     valid |= !is_surface;
     return valid;
@@ -142,22 +143,22 @@ dr::mask_t<Float> phase_filter(const SurfaceInteraction<Float, Spectrum> &si,
     MI_IMPORT_TYPES(PhaseFunctionPtr)
 
     Mask valid = false, pass = true;
-    
+
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Phase);
-    Mask exclusif = has_flag(filter_flags, SensorFilterFlags::Exclusif);
-    Mask is_medium = mei.is_valid() && mei.t < si.t;
+    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask is_medium      = mei.is_valid() && mei.t < si.t;
 
     if (dr::any_or<false>(!is_medium))
         return true;
 
-    if (dr::any_or<true>(include_filter)){
+    if (dr::any_or<true>(include_filter)) {
         PhaseFunctionPtr phase = mei.medium->phase_function();
         pass &= dr::eq(phase->filter(), +FilterType::Include);
         valid = pass && include_filter;
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif; 
+    valid |= !include_filter && !exclusif;
     // Check whether this is a medium interaction, return true if not
     valid |= !is_medium;
     return valid;
