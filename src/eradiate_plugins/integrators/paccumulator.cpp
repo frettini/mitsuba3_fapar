@@ -777,8 +777,10 @@ public:
                            "  min_depth = %u,\n"
                            "  max_depth = %i,\n"
                            "  rr_depth = %i\n"
+                           "  periodic_box = %d\n"
                            "]",
-                           m_max_depth, m_rr_depth);
+                           m_min_depth, m_max_depth, m_rr_depth, m_periodic_box
+                        );
     }
 
 protected:
