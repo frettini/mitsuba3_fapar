@@ -38,6 +38,10 @@ public:
         PYBIND11_OVERRIDE_PURE(ref<Bitmap>, Film, bitmap, raw);
     }
 
+    bool is_volume_film() const override {
+        PYBIND11_OVERRIDE(bool, Film, is_volume_film);
+    }
+
     void write(const fs::path &path) const override {
         PYBIND11_OVERRIDE_PURE(void, Film, write, path);
     }
@@ -91,6 +95,7 @@ MI_PY_EXPORT(Film) {
         .def_method(Film, clear)
         .def_method(Film, develop, "raw"_a = false)
         .def_method(Film, bitmap, "raw"_a = false)
+        .def_method(Film, is_volume_film)
         .def_method(Film, write, "path"_a)
         .def_method(Film, write_tensor, "values"_a, "idx"_a, "active"_a)
         .def_method(Film, sample_border)

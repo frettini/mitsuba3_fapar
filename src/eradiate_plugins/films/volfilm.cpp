@@ -142,6 +142,8 @@ public:
         NotImplementedError("bitmap");
     }
 
+    bool is_volume_film() const override { return true; }
+
     void write(const fs::path &/*path*/) const override {
         NotImplementedError("write");
     }
@@ -149,7 +151,7 @@ public:
     void write_tensor(const Float values, const UInt32 idx, Mask active) override {
         if constexpr (!dr::is_jit_v<Float>){
             std::lock_guard<std::mutex> lock(m_mutex);
-            Log(Debug,"accumulate val: %f, at idx : %d", values, idx);
+            Log(Debug,"accumulate val: %f, at idx : %d, active: %d", values, idx, active);
             dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
         } else {
             dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);

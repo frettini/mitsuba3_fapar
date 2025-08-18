@@ -72,6 +72,9 @@ public:
     /// Return a bitmap object storing the developed contents of the film
     virtual ref<Bitmap> bitmap(bool raw = false) const = 0;
 
+    /// Return whether this is a volume film (uses tensors instead of bitmaps)
+    virtual bool is_volume_film() const { return false; }
+
     /// Write the developed contents of the film to a file on disk
     virtual void write(const fs::path &path) const = 0;
 

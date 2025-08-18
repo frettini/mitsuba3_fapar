@@ -69,8 +69,6 @@ static const char *__doc_mitsuba_AdjointIntegrator_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_AdjointIntegrator_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_AdjointIntegrator_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_AdjointIntegrator_AdjointIntegrator = R"doc(Create an integrator)doc";
 
 static const char *__doc_mitsuba_AdjointIntegrator_class = R"doc()doc";
@@ -301,8 +299,6 @@ static const char *__doc_mitsuba_BSDF_6 = R"doc()doc";
 static const char *__doc_mitsuba_BSDF_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_BSDF_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_BSDF_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_BSDFContext =
 R"doc(Context data structure for BSDF evaluation and sampling
@@ -630,7 +626,7 @@ Parameter ``sample2``:
     A uniformly distributed sample on :math:`[0,1]^2`. It is used to
     generate the sampled direction.)doc";
 
-static const char *__doc_mitsuba_BSDF_filter = R"doc(Flags for all components combined.)doc";
+static const char *__doc_mitsuba_BSDF_filter = R"doc(Return the filter type.)doc";
 
 static const char *__doc_mitsuba_BSDF_flags = R"doc(Flags for all components combined.)doc";
 
@@ -2111,8 +2107,6 @@ static const char *__doc_mitsuba_Emitter_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Emitter_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Emitter_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_EmitterFlags =
 R"doc(This list of flags is used to classify the different types of
 emitters.)doc";
@@ -2221,8 +2215,6 @@ static const char *__doc_mitsuba_Endpoint_6 = R"doc()doc";
 static const char *__doc_mitsuba_Endpoint_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Endpoint_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_Endpoint_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_Endpoint_Endpoint = R"doc()doc";
 
@@ -2638,8 +2630,6 @@ static const char *__doc_mitsuba_Film_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Film_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Film_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_FilmFlags = R"doc(This list of flags is used to classify the different types of films.)doc";
 
 static const char *__doc_mitsuba_FilmFlags_Alpha = R"doc(The film stores an alpha channel)doc";
@@ -2693,6 +2683,8 @@ static const char *__doc_mitsuba_Film_crop_size_product = R"doc(Return the produ
 static const char *__doc_mitsuba_Film_develop = R"doc(Return a image buffer object storing the developed image)doc";
 
 static const char *__doc_mitsuba_Film_flags = R"doc(Flags for all properties combined.)doc";
+
+static const char *__doc_mitsuba_Film_is_volume_film = R"doc(Return whether this is a volume film (uses tensors instead of bitmaps))doc";
 
 static const char *__doc_mitsuba_Film_m_crop_offset = R"doc()doc";
 
@@ -3121,8 +3113,6 @@ static const char *__doc_mitsuba_ImageBlock_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_ImageBlock_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_ImageBlock_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_ImageBlock_ImageBlock =
 R"doc(Construct a zero-initialized image block with the desired shape and
 channel count
@@ -3382,8 +3372,6 @@ static const char *__doc_mitsuba_Integrator_6 = R"doc()doc";
 static const char *__doc_mitsuba_Integrator_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Integrator_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_Integrator_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_Integrator_Integrator = R"doc(Create an integrator)doc";
 
@@ -4023,8 +4011,6 @@ static const char *__doc_mitsuba_Medium_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Medium_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Medium_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_MediumInteraction = R"doc(Stores information related to a medium scattering interaction)doc";
 
 static const char *__doc_mitsuba_MediumInteraction_MediumInteraction = R"doc(//! @})doc";
@@ -4370,8 +4356,6 @@ static const char *__doc_mitsuba_Mesh_6 = R"doc()doc";
 static const char *__doc_mitsuba_Mesh_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Mesh_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_Mesh_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_Mesh_Mesh =
 R"doc(Creates a zero-initialized mesh with the given vertex and face counts
@@ -4872,8 +4856,6 @@ static const char *__doc_mitsuba_MonteCarloIntegrator_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_MonteCarloIntegrator_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_MonteCarloIntegrator_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_MonteCarloIntegrator_MonteCarloIntegrator = R"doc(Create an integrator)doc";
 
 static const char *__doc_mitsuba_MonteCarloIntegrator_class = R"doc()doc";
@@ -5072,8 +5054,6 @@ static const char *__doc_mitsuba_PCG32Sampler_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_PCG32Sampler_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_PCG32Sampler_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_PCG32Sampler_PCG32Sampler = R"doc()doc";
 
 static const char *__doc_mitsuba_PCG32Sampler_PCG32Sampler_2 = R"doc(Copy state to a new PCG32Sampler object)doc";
@@ -5119,8 +5099,6 @@ static const char *__doc_mitsuba_PhaseFunction_6 = R"doc()doc";
 static const char *__doc_mitsuba_PhaseFunction_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_PhaseFunction_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_PhaseFunction_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_PhaseFunctionContext = R"doc()doc";
 
@@ -5192,7 +5170,7 @@ Returns:
     The value and the sampling PDF of the phase function in direction
     wo)doc";
 
-static const char *__doc_mitsuba_PhaseFunction_filter = R"doc(Flags for all components combined.)doc";
+static const char *__doc_mitsuba_PhaseFunction_filter = R"doc(Return the filter type.)doc";
 
 static const char *__doc_mitsuba_PhaseFunction_flags = R"doc(Flags for this phase function.)doc";
 
@@ -5604,8 +5582,6 @@ static const char *__doc_mitsuba_ProjectiveCamera_6 = R"doc()doc";
 static const char *__doc_mitsuba_ProjectiveCamera_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_ProjectiveCamera_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_ProjectiveCamera_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_ProjectiveCamera_ProjectiveCamera = R"doc()doc";
 
@@ -6089,8 +6065,6 @@ static const char *__doc_mitsuba_ReconstructionFilter_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_ReconstructionFilter_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_ReconstructionFilter_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_ReconstructionFilter_ReconstructionFilter = R"doc(Create a new reconstruction filter)doc";
 
 static const char *__doc_mitsuba_ReconstructionFilter_border_size = R"doc(Return the block border size required when rendering with this filter)doc";
@@ -6271,8 +6245,6 @@ static const char *__doc_mitsuba_Sampler_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Sampler_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Sampler_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_Sampler_Sampler = R"doc()doc";
 
 static const char *__doc_mitsuba_Sampler_Sampler_2 = R"doc(Copy state to a new sampler object)doc";
@@ -6374,8 +6346,6 @@ static const char *__doc_mitsuba_SamplingIntegrator_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_SamplingIntegrator_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_SamplingIntegrator_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_SamplingIntegrator_SamplingIntegrator = R"doc(//! @})doc";
 
 static const char *__doc_mitsuba_SamplingIntegrator_class = R"doc()doc";
@@ -6472,8 +6442,6 @@ static const char *__doc_mitsuba_Scene_6 = R"doc()doc";
 static const char *__doc_mitsuba_Scene_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Scene_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_Scene_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_Scene_Scene = R"doc(Instantiate a scene from a Properties object)doc";
 
@@ -7021,8 +6989,6 @@ static const char *__doc_mitsuba_Sensor_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Sensor_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_SensorFilterFlags =
 R"doc(This list of flags is used to control which filters are used for a
 given sensor.)doc";
@@ -7045,7 +7011,37 @@ static const char *__doc_mitsuba_SensorFilterFlags_Surface = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_Sensor = R"doc()doc";
 
-static const char *__doc_mitsuba_Sensor_accumulate = R"doc()doc";
+static const char *__doc_mitsuba_Sensor_accumulate =
+R"doc(Accumulate emitted and throughput values to the film given the
+integrator current state.
+
+Parameter ``ray``:
+    Current ray traversing the scene.
+
+Parameter ``si``:
+    Surface interaction. Note that it is not necessarily valid.
+
+Parameter ``mei``:
+    Medium interaction. Note that it is not necessarily valid.
+
+Parameter ``tmax``:
+    Maximum ray distance. This is equivalent to min(si.t, mei.t).
+
+Parameter ``emitted``:
+    The radiance emitted by the source.
+
+Parameter ``throughput``:
+    The throughput carried by the sample.
+
+Parameter ``sample_scale``:
+    Factor that accounts for the number of samples taken.
+
+Parameter ``filter``:
+    Indicates whether this sample passes the filters and should be
+    accumulated. Note, sensors can define sensor filter flags to
+    determine which filter affects it.
+
+Parameter ``active``:)doc";
 
 static const char *__doc_mitsuba_Sensor_class = R"doc()doc";
 
@@ -7182,8 +7178,6 @@ static const char *__doc_mitsuba_Shape_8 = R"doc()doc";
 
 static const char *__doc_mitsuba_Shape_9 = R"doc()doc";
 
-static const char *__doc_mitsuba_Shape_10 = R"doc()doc";
-
 static const char *__doc_mitsuba_ShapeGroup = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeGroup_2 = R"doc()doc";
@@ -7199,8 +7193,6 @@ static const char *__doc_mitsuba_ShapeGroup_6 = R"doc()doc";
 static const char *__doc_mitsuba_ShapeGroup_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeGroup_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_ShapeGroup_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeGroup_ShapeGroup = R"doc()doc";
 
@@ -7267,8 +7259,6 @@ static const char *__doc_mitsuba_ShapeKDTree_6 = R"doc()doc";
 static const char *__doc_mitsuba_ShapeKDTree_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeKDTree_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_ShapeKDTree_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeKDTree_ShapeKDTree =
 R"doc(Create an empty kd-tree and take build-related parameters from
@@ -7501,7 +7491,7 @@ mapping is bijective. The default implementation throws.)doc";
 
 static const char *__doc_mitsuba_Shape_exterior_medium = R"doc(Return the medium that lies on the exterior of this shape)doc";
 
-static const char *__doc_mitsuba_Shape_filter = R"doc()doc";
+static const char *__doc_mitsuba_Shape_filter = R"doc(Return the filter type.)doc";
 
 static const char *__doc_mitsuba_Shape_get_children_string = R"doc()doc";
 
@@ -9158,8 +9148,6 @@ static const char *__doc_mitsuba_Texture_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Texture_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Texture_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_Texture_D65 = R"doc(Convenience function returning the standard D65 illuminant)doc";
 
 static const char *__doc_mitsuba_Texture_D65_2 =
@@ -9693,8 +9681,6 @@ static const char *__doc_mitsuba_Volume_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_Volume_8 = R"doc()doc";
 
-static const char *__doc_mitsuba_Volume_9 = R"doc()doc";
-
 static const char *__doc_mitsuba_VolumeGrid = R"doc()doc";
 
 static const char *__doc_mitsuba_VolumeGrid_2 = R"doc()doc";
@@ -9710,8 +9696,6 @@ static const char *__doc_mitsuba_VolumeGrid_6 = R"doc()doc";
 static const char *__doc_mitsuba_VolumeGrid_7 = R"doc()doc";
 
 static const char *__doc_mitsuba_VolumeGrid_8 = R"doc()doc";
-
-static const char *__doc_mitsuba_VolumeGrid_9 = R"doc()doc";
 
 static const char *__doc_mitsuba_VolumeGrid_VolumeGrid =
 R"doc(Load a VolumeGrid from a given filename
@@ -9940,7 +9924,9 @@ if this is required by the BSDF (e.g. for texture filtering).
 
 Implementation in 'bsdf.h')doc";
 
-static const char *__doc_mitsuba_bsdf_filter = R"doc()doc";
+static const char *__doc_mitsuba_bsdf_filter =
+R"doc(BSDF filter Test that the interaction is a surface interaction and
+that the bsdf at interaction has a filter type equal to Include.)doc";
 
 static const char *__doc_mitsuba_build_gas =
 R"doc(Build OptiX geometry acceleration structures (GAS) for a given list of
@@ -10001,7 +9987,9 @@ for a Lambertian diffuse material), this is also currently used in
 many BSDFs and emitters where it is not clear how they should interact
 with polarization.)doc";
 
-static const char *__doc_mitsuba_depth_filter = R"doc()doc";
+static const char *__doc_mitsuba_depth_filter =
+R"doc(Depth filter Tests that the current depth is within the specific
+minimum and maximum depth.)doc";
 
 static const char *__doc_mitsuba_detail_CIE1932Tables =
 R"doc(Struct carrying color space tables with fits for cie1931_xyz and
@@ -11158,7 +11146,9 @@ static const char *__doc_mitsuba_perspective_projection =
 R"doc(Helper function to create a perspective projection transformation
 matrix)doc";
 
-static const char *__doc_mitsuba_phase_filter = R"doc()doc";
+static const char *__doc_mitsuba_phase_filter =
+R"doc(Phase filter Test that the interaction is a medium interaction and
+that the phase at interaction has a filter type equal to Include.)doc";
 
 static const char *__doc_mitsuba_prepare_ias =
 R"doc(Prepares and fills the OptixInstance array associated with a given
@@ -11500,7 +11490,9 @@ Returns:
 
 static const char *__doc_mitsuba_sggx_sample_2 = R"doc()doc";
 
-static const char *__doc_mitsuba_shape_filter = R"doc()doc";
+static const char *__doc_mitsuba_shape_filter =
+R"doc(Shape filter Test that the interaction is a surface interaction and
+that the shape at interaction has a filter type equal to Include.)doc";
 
 static const char *__doc_mitsuba_sobol_2 = R"doc(Sobol' radical inverse in base 2)doc";
 

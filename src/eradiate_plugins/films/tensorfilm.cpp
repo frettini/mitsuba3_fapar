@@ -158,6 +158,8 @@ public:
         NotImplementedError("bitmap");
     }
 
+    bool is_volume_film() const override { return true; }
+
     void write(const fs::path &/*path*/) const override {
         NotImplementedError("write");
     }
