@@ -142,7 +142,6 @@ public:
                 dr::max(unpolarized_spectrum(absorption)),
                 Frame3f::cos_theta(si.wi));
             // Calculated the resulting absorbed flux
-            // Spectrum result = emitted * throughput * absorption * dr::abs(Frame3f::cos_theta(si.wi));
             Spectrum result = emitted * throughput * absorption;
 
             result *= m_apply_sample_scale ? sample_scale : Float(1.f); 
