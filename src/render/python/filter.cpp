@@ -13,7 +13,7 @@ MI_PY_EXPORT(filter) {
         .def_value(SensorFilterFlags, BSDF)
         .def_value(SensorFilterFlags, Shape)
         .def_value(SensorFilterFlags, Phase)
-        .def_value(SensorFilterFlags, Exclusif)
+        .def_value(SensorFilterFlags, Exclusive)
         .def_value(SensorFilterFlags, Surface)
         .def_value(SensorFilterFlags, All);
 

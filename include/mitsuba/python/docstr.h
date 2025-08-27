@@ -6999,7 +6999,7 @@ static const char *__doc_mitsuba_SensorFilterFlags_BSDF = R"doc()doc";
 
 static const char *__doc_mitsuba_SensorFilterFlags_Depth = R"doc()doc";
 
-static const char *__doc_mitsuba_SensorFilterFlags_Exclusif = R"doc()doc";
+static const char *__doc_mitsuba_SensorFilterFlags_Exclusive = R"doc()doc";
 
 static const char *__doc_mitsuba_SensorFilterFlags_None = R"doc()doc";
 

@@ -33,7 +33,7 @@ enum class SensorFilterFlags : uint32_t {
     Shape               = 0x00004,
     Phase               = 0x00008,
     // Filters not included in the BitFlag will automatically fail.
-    Exclusif            = 0x80000,
+    Exclusive           = 0x80000,
     Surface = Depth | BSDF | Shape,
     All     = Depth | BSDF | Shape | Phase,
 };
@@ -53,7 +53,7 @@ dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
 
     Mask valid = false, pass = true;
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Depth);
-    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask exclusive       = has_flag(filter_flags, SensorFilterFlags::Exclusive);
 
     if (dr::any_or<true>(include_filter)) {
         pass  = depth >= min_depth && depth < max_depth;
@@ -61,7 +61,7 @@ dr::mask_t<UInt32> depth_filter(UInt32 depth, UInt32 min_depth,
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif;
+    valid |= !include_filter && !exclusive;
     return valid;
 }
 
@@ -79,7 +79,7 @@ dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
     Mask valid = false, pass = true;
 
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::BSDF);
-    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask exclusive       = has_flag(filter_flags, SensorFilterFlags::Exclusive);
     Mask is_surface     = si.is_valid() && si.t < mei.t;
 
     if (dr::any_or<false>(!is_surface))
@@ -92,7 +92,7 @@ dr::mask_t<Float> bsdf_filter(const SurfaceInteraction<Float, Spectrum> &si,
         valid = pass && include_filter;
     }
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif;
+    valid |= !include_filter && !exclusive;
     // Check whether this is a surface interaction, return true if not
     valid |= !is_surface;
     return valid;
@@ -112,7 +112,7 @@ dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
     Mask valid = false, pass = true;
 
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Shape);
-    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask exclusive       = has_flag(filter_flags, SensorFilterFlags::Exclusive);
     Mask is_surface     = si.is_valid() && si.t < mei.t;
 
     if (dr::any_or<false>(!is_surface))
@@ -125,7 +125,7 @@ dr::mask_t<Float> shape_filter(const SurfaceInteraction<Float, Spectrum> &si,
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif;
+    valid |= !include_filter && !exclusive;
     // Check whether this is a surface interaction, return true if not
     valid |= !is_surface;
     return valid;
@@ -145,7 +145,7 @@ dr::mask_t<Float> phase_filter(const SurfaceInteraction<Float, Spectrum> &si,
     Mask valid = false, pass = true;
 
     Mask include_filter = has_flag(filter_flags, SensorFilterFlags::Phase);
-    Mask exclusif       = has_flag(filter_flags, SensorFilterFlags::Exclusif);
+    Mask exclusive       = has_flag(filter_flags, SensorFilterFlags::Exclusive);
     Mask is_medium      = mei.is_valid() && mei.t < si.t;
 
     if (dr::any_or<false>(!is_medium))
@@ -158,7 +158,7 @@ dr::mask_t<Float> phase_filter(const SurfaceInteraction<Float, Spectrum> &si,
     }
 
     // Sensors account invalid interactions (e.g. VoxelFlux)
-    valid |= !include_filter && !exclusif;
+    valid |= !include_filter && !exclusive;
     // Check whether this is a medium interaction, return true if not
     valid |= !is_medium;
     return valid;
