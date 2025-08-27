@@ -151,7 +151,6 @@ public:
 
     void clear() override {
         using FloatX = DynamicBuffer<ScalarFloat>;
-        Log(Debug,"clear buffer");
         
         FloatX zeros = dr::zeros<FloatX>(m_data_size);
         
@@ -180,7 +179,6 @@ public:
     void write_tensor(const Float values, const UInt32 idx, Mask active) override {
         if constexpr (!dr::is_jit_v<Float>){
             std::lock_guard<std::mutex> lock(m_mutex);
-            Log(Debug,"accumulate val: %f, at idx : %d, active: %d", values, idx, active);
             dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
         } else {
             dr::scatter_reduce(ReduceOp::Add, m_data.array(), values, idx, active);
