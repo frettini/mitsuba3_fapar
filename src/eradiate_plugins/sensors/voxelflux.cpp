@@ -52,15 +52,16 @@ VoxelFlux sensor (:monosp:`voxelflux`)
 This sensor measures the flux that traverses voxel faces. It keeps track of 
 the direction and magnitude of the flux that traverses each voxel face. Note 
 that the underlying film will have the following shape:
-    [D, F, X, Y, Z ]
-    [2, 3, res_x+1, res_y+1, res_z+z]
+    [D, F, X, Y, Z, C ]
+    [2, 3, res_x+1, res_y+1, res_z+z, n_channels]
 with:
 - D : the flux direction relative to the axis; 0 for negative, 1 for positive.
 - F : the axis of the faces. 
 - X,Y,Z : the index of the face. Note that those dimensions are padded so that
-there always is an extra element for axis that do not correspond to F. For 
-example for F=0, the size of X is res_x+1 and the size of Y and Z are res_y and 
-res_z.
+ there always is an extra element for axis that do not correspond to F. For 
+ example for F=0, the size of X is res_x+1 and the size of Y and Z are res_y and 
+ res_z.
+- C : the number of channels.
 
 .. tabs::
     .. code-tab::  xml
@@ -120,10 +121,11 @@ public:
             
             std::string sizes = "2, 3, " + std::to_string(resx + 1) + ", " +
                                 std::to_string(resy + 1) + ", " +
-                                std::to_string(resz + 1);
+                                std::to_string(resz + 1) + ", " + 
+                                std::to_string(1);
             // Instantiate a tensor film with corresponding size
             Properties props_film("tensorfilm");
-            props_film.set_int("ndims",5);
+            props_film.set_int("ndims",6);
             props_film.set_string("sizes", sizes);
             m_film = static_cast<Film *>(pmgr->create_object<Film>(props_film));
         }
@@ -224,17 +226,13 @@ public:
         
         const ScalarVector3i face_index(0,1,2);
 
-        // For shape [D, F, X, Y, Z] with D=2, F=3, X=(res_x+1), Y=(res_y+1), Z=(res_z+1)
-        UInt32 stride_z = 1;
+        // For shape [D, F, X, Y, Z, C] with D=2, F=3, X=(res_x+1), Y=(res_y+1), Z=(res_z+1), C=n_channels
+        // For now assume n_channels to be equal to one.
+        UInt32 stride_z = m_film->base_channel_count();
         UInt32 stride_y = stride_z * (m_grid_res.z() + 1);
         UInt32 stride_x = stride_y * (m_grid_res.y() + 1);
         UInt32 stride_f = stride_x * (m_grid_res.x() + 1);
         UInt32 stride_d = stride_f * 3;
-
-        // UInt32 stride_x = 2;
-        // UInt32 stride_y = stride_x * (m_grid_res.x() + 1);
-        // UInt32 stride_z = stride_y * (m_grid_res.y() + 1);
-        // UInt32 stride_f = stride_z * (m_grid_res.z() + 1);
 
         Log(Debug, "ray.o: %d, ray.d: %d", ray.o, ray.d);
         Log(Debug, "m_bbox.min: %d, m_bbox.max: %d, active : %d", m_bbox.min, m_bbox.max, active);

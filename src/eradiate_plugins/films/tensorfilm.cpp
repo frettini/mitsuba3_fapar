@@ -24,11 +24,17 @@ Tensor film (:monosp:`tensorfilm`)
 
  * - ndims
    - |int|
-   - number of dimensions of the underlying tensor. (Default:monosp:`3`)
+   - Number of dimensions of the underlying tensor. (Default:monosp:`3`)
 
  * - sizes
    - |string|
-   - size of each dimension of the underlying tensor. (Default:monosp:`1`)
+   - Size of each dimension of the underlying tensor. (Default:monosp:`1`)
+
+ * - color_channel
+   - |int|
+   - Specify which dimension is the color channel. This will by default be the 
+    last dimension. Only change this if you control how data is written to the 
+    film. (Default:monosp:`-1`)
 
 This film allows to write to a tensor with arbitrary number of dimensions 
 and sizes. This can be useful to accumulate values in non-standard formats.
@@ -60,15 +66,15 @@ public:
     MI_IMPORT_TYPES(ImageBlock)
 
     TensorFilm(const Properties &props) : Base(props) {
-        // Horizontal and vertical film resolution in pixels
+        // Number of dimensions
         m_ndims = props.get<size_t>("ndims", 3);
 
         if (props.has_property("sizes")) {
             std::vector<std::string> sizes_str =
-                string::tokenize(props.string("sizes"), " ,");
+            string::tokenize(props.string("sizes"), " ,");
 
             if( sizes_str.size() != m_ndims) 
-                Throw("'sizes' parameter must have the same size as 'ndims'");
+                Throw("'sizes' parameter has %u elements but %u 'ndims' were specified", sizes_str.size(), m_ndims);
 
             m_sizes.reserve(m_sizes.size());
 
@@ -92,6 +98,13 @@ public:
             sizes[i] = (size_t) m_sizes[i];
         }
 
+        // Specify the color channel
+        // but does it make sense to have the channel size be on another dimension?
+        int color_channel = props.get<int>("color_channel", -1);
+        if (color_channel == -1) {
+            m_channel_dim = ScalarUInt32(m_ndims - 1);
+        }
+
         // Initialize a buffer with zeros and pass it to a tensor.
         using FloatX = DynamicBuffer<ScalarFloat>;
         FloatX zeros = dr::zeros<FloatX>(m_data_size);
@@ -104,7 +117,7 @@ public:
     }
 
     size_t base_channels_count() const override {
-        return 1;
+        return (size_t) m_n_channels;
     }
 
     const ScalarUInt32 &size(ScalarUInt32 idx) const override {
@@ -124,7 +137,7 @@ public:
     }
 
     size_t prepare(const std::vector<std::string> &/*aovs*/) override {
-        return 1;
+        return (size_t) m_n_channels;
     }
 
     ref<ImageBlock> create_block(const ScalarVector2u &/*size*/, bool /*normalize*/,
@@ -193,6 +206,7 @@ protected:
     std::vector<ScalarUInt32> m_sizes;
     size_t m_data_size;
     TensorXf m_data;
+    ScalarUInt32 m_n_channels;
 
     std::mutex m_mutex;
 };
