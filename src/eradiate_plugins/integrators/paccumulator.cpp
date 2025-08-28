@@ -42,13 +42,13 @@ Particle tracer (:monosp:`paccumulator`)
    - If specified, divides the workload in successive passes with 
      :paramtype:`samples_per_pass` samples per pixel.
 
- * - periodic_box
+ * - pbox_min, pbox_max
    - |cube|
-   - Cube which represents the periodic boundary. When specified, rays generated
-     within the cube that exit from one of the lateral faces will come back in
-     from the opposing face. Only cubes that exit from the top or bottom face
-     will be terminated. Note that the material of the cube must be Null and that
-     rays must be generated from within the cube.
+   - Bounding box minimum and maximum points that form the periodic boundary. 
+     When specified, rays generated within the box that exit from one of the 
+     lateral faces will re-enter from the opposing face. Only rays that exit 
+     from the top or bottom face will be terminated. Note that rays must be 
+     generated from within the box.
    - |exposed|
 
  * - film_scale
@@ -410,24 +410,27 @@ public:
                     PhaseFunctionContext)
 
     ParticleAccumulatorIntegrator(const Properties &props) : Base(props) { 
-        if (props.has_property("periodic_box")){
-            auto obj = props.object("periodic_box");
-            Shape *periodic_box = dynamic_cast<Shape *>(obj.get());
-
-            m_pbox.reset();
-            if(periodic_box){
-                m_pbox = periodic_box->bbox();
-            }
-            m_pbox_extents = m_pbox.extents();
-            m_periodic_box = periodic_box;
-    
-            if (periodic_box){
-                if (!dr::all(has_flag(m_periodic_box->bsdf()->flags(), BSDFFlags::Null))) {
-                    Throw("Periodic Box bsdf must have a Null flag!");
-                }
-            }
-        }
         
+         if (props.has_property("pbox_min") && props.has_property("pbox_max")){
+            ScalarPoint3f bbox_min = props.get<ScalarPoint3f>("pbox_min");
+            ScalarPoint3f bbox_max = props.get<ScalarPoint3f>("pbox_max");
+            m_pbox = ScalarBoundingBox3f(bbox_min, bbox_max);
+            m_pbox_extents = m_pbox.extents();
+            ScalarTransform4f pbox_to_world = 
+                ScalarTransform4f::translate(m_pbox.center()) *
+                ScalarTransform4f::scale(m_pbox.extents()*0.5f);
+
+            // Create the null bsdf which will be references in the periodic cube.
+            m_pbox_bsdf = PluginManager::instance()->create_object<BSDF>(Properties("null"));
+
+            // Create the box shape that fits the periodic box.
+            auto props = Properties("cube");
+            props.set_id("periodic_box");
+            props.set_string("name", "periodic_box");
+            props.set_transform("to_world", pbox_to_world);
+            props.set_object("bsdf", (Object *) m_pbox_bsdf.get());
+            m_pbox_shape = PluginManager::instance()->create_object<Shape>(props);
+        }        
     }
 
     MI_INLINE
@@ -498,11 +501,6 @@ public:
         // backward tracers, starting at one. This would have an impact on the 
         // Russian Roulette.
 
-        // @PONDER: The depth starts at one here because it technically doesn't 
-        // account for emitters that are directly visible. Might need to set it 
-        // to 0 because we are doing something fundamentally different?
-        
-
         // Tracks radiance scaling due to index of refraction changes
         Float eta(1.f);
         UInt32 depth = 0;
@@ -516,7 +514,8 @@ public:
         }
 
         // Initialize periodic bound variables
-        Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
+        // Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
+        Mask pbounds_valid = m_pbox.valid() && dr::neq(m_pbox_shape.get(), nullptr);
         UInt32 max_periodic_iterations = 10; // TODO: include with depth?
         UInt32 periodic_count = 0;
 
@@ -570,6 +569,15 @@ public:
                 /* ray_flags = */ +RayFlags::All, 
                 /* coherent = */ dr::eq(depth, 0u),
                 active);
+            
+            if(dr::any_or<true>(pbounds_valid && active)) {
+                SurfaceInteraction3f pbox_si = 
+                m_pbox_shape->ray_intersect(ray, 
+                    /* ray_flags = */ +RayFlags::All, 
+                    pbounds_valid && active);
+
+                dr::masked(si, pbounds_valid && pbox_si.is_valid() && pbox_si.t < si.t) = pbox_si;
+            }
                 
             Float t = si.t;
 
@@ -589,7 +597,6 @@ public:
             }
             Log(Debug, "si.t: %f, mei.t: %f, t: %f", si.t, mei.t, t);
 
-            
 
             /* ------------------------- Accumulate ------------------------- */
             
@@ -725,7 +732,7 @@ public:
                 
             /* ------------------------- Ray Update ------------------------- */
                 // Spawn ray for next iteration
-                escaped_pbound = pbounds_valid && active_surface && dr::eq(m_periodic_box, si.shape);
+                escaped_pbound = pbounds_valid && active_surface && dr::eq(m_pbox_shape.get(), si.shape);
                 
                 // In the case of not escaping pbound, update using BSDF sample
                 dr::masked(ray, !escaped_pbound) = si.spawn_ray(si.to_world(bs.wo));
@@ -783,13 +790,15 @@ public:
                            "  max_depth = %i,\n"
                            "  rr_depth = %i\n"
                            "  periodic_box = %d\n"
+                           "  periodic_box_shape = %d"
                            "]",
-                           m_min_depth, m_max_depth, m_rr_depth, m_periodic_box
+                           m_min_depth, m_max_depth, m_rr_depth, m_pbox, m_pbox_shape
                         );
     }
 
 protected:
-    ShapePtr m_periodic_box = nullptr;
+    ref<BSDF> m_pbox_bsdf;
+    ref<Shape> m_pbox_shape;
     ScalarBoundingBox3f m_pbox;
     ScalarVector3f m_pbox_extents;
 
