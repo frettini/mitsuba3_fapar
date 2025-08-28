@@ -226,7 +226,7 @@ public:
 
         // For shape [D, F, X, Y, Z, C] with D=2, F=3, X=(res_x+1), Y=(res_y+1), Z=(res_z+1), C=n_channels
         // For now assume n_channels to be equal to one.
-        UInt32 stride_z = m_film->base_channel_count();
+        UInt32 stride_z = m_film->base_channels_count();
         UInt32 stride_y = stride_z * (m_grid_res.z() + 1);
         UInt32 stride_x = stride_y * (m_grid_res.y() + 1);
         UInt32 stride_f = stride_x * (m_grid_res.x() + 1);

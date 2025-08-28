@@ -102,7 +102,8 @@ public:
         // but does it make sense to have the channel size be on another dimension?
         int color_channel = props.get<int>("color_channel", -1);
         if (color_channel == -1) {
-            m_channel_dim = ScalarUInt32(m_ndims - 1);
+            ScalarUInt32 channel_dim = ScalarUInt32(m_ndims - 1);
+            m_n_channels = sizes[channel_dim];
         }
 
         // Initialize a buffer with zeros and pass it to a tensor.
