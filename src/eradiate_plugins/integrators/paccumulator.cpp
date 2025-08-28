@@ -571,12 +571,24 @@ public:
                 active);
             
             if(dr::any_or<true>(pbounds_valid && active)) {
-                SurfaceInteraction3f pbox_si = 
-                m_pbox_shape->ray_intersect(ray, 
-                    /* ray_flags = */ +RayFlags::All, 
-                    pbounds_valid && active);
+                auto [intersect_pbox, tmin, tmax] = m_pbox.ray_intersect(ray);
+                
+                Vector3f step_dir = dr::select(ray.d > 0, -1.f, 1.f); // Flip normal to the inside
+                auto exit_face = dr::abs((ray(tmax+math::RayEpsilon<Float>) - m_pbox.center())) > m_pbox_extents * 0.5;
+                
+                // Initialize the pbox interaction 
+                SurfaceInteraction3f pbox_si;
+                pbox_si.t = tmax;
+                pbox_si.p = ray(pbox_si.t);
+                pbox_si.shape = m_pbox_shape.get();
+                pbox_si.wavelengths = ray.wavelengths;
+                pbox_si.n = dr::select(exit_face, step_dir, 0.f);
+                pbox_si.sh_frame = Frame3f(pbox_si.n);
+                pbox_si.wi = pbox_si.to_local(-ray.d);
 
-                dr::masked(si, pbounds_valid && pbox_si.is_valid() && pbox_si.t < si.t) = pbox_si;
+                // Only replace the interaction if it is closer to the scene interaction.
+                Mask replace_si = pbounds_valid && active && pbox_si.is_valid() && pbox_si.t < si.t;
+                dr::masked(si, replace_si) = pbox_si;
             }
                 
             Float t = si.t;
@@ -713,7 +725,8 @@ public:
                 // Using geometric normals (wo points to the camera)
                 Float wi_dot_geo_n = dr::dot(si.n, -ray.d),
                     wo_dot_geo_n = dr::dot(si.n, si.to_world(bs.wo));
-
+                Log(Debug, "wi_dot_geo: %f, wo_dot_geo: %f", wi_dot_geo_n, wo_dot_geo_n);
+                Log(Debug, "si.n: %f, ray.d: %f, si.to_world(bs.wo)", wi_dot_geo_n, wo_dot_geo_n);
                 // Prevent light leaks due to shading normals
                 active &= (wi_dot_geo_n * Frame3f::cos_theta(si.wi) > 0.f) &&
                         (wo_dot_geo_n * Frame3f::cos_theta(bs.wo) > 0.f);
@@ -726,6 +739,7 @@ public:
                 
                 dr::masked(throughput, active_surface) *= bsdf_val * correction;
                 dr::masked(eta, active_surface) *= bs.eta;
+                Log(Debug, "throughput: %d, bsdf_val: %d, correction: %d", throughput, bsdf_val, correction);
                 
                 Mask non_null_bsdf = active_surface && !has_flag(bs.sampled_type, BSDFFlags::Null);
                 dr::masked(depth, non_null_bsdf) += 1;
