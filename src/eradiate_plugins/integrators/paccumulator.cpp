@@ -357,9 +357,14 @@ public:
 
         // Minimum recorded value.
         int min_depth = props.get<int>("min_depth", 0);
-        if (min_depth < 0 || min_depth > (int) m_max_depth)
+        
+        if (min_depth < 0)
+            m_min_depth = 0;
+        else 
+            m_min_depth = (uint32_t) min_depth;
+
+        if (m_min_depth > m_max_depth)
             Throw("\"min_depth\" must be set to 0 or a value smaller than max depth");
-        m_min_depth = (uint32_t) min_depth;
     };
 
     /// Virtual destructor
