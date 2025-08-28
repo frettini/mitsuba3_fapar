@@ -162,7 +162,6 @@ public:
         } 
         m_voxel_size = m_bbox.extents() / ScalarVector3f(m_grid_res);
 
-        Log(Debug, "bbox.extent: %f, m_grid_res: %f, m_voxel_size: %f", m_bbox.extents(), m_grid_res, m_voxel_size);
     }
 
     // This sensor does not occupy any particular region of space, return an
@@ -181,7 +180,6 @@ public:
         Mask active = true
     ) override {
            
-        Log(Debug, "ACCUMULATE");
         // Find intersection with the bounding box of the volume grid
         Vector3f t_bmin = (m_bbox.min - ray.o) / ray.d;
         Vector3f t_bmax = (m_bbox.max - ray.o) / ray.d;
@@ -234,12 +232,6 @@ public:
         UInt32 stride_f = stride_x * (m_grid_res.x() + 1);
         UInt32 stride_d = stride_f * 3;
 
-        Log(Debug, "ray.o: %d, ray.d: %d", ray.o, ray.d);
-        Log(Debug, "m_bbox.min: %d, m_bbox.max: %d, active : %d", m_bbox.min, m_bbox.max, active);
-        Log(Debug, "t_end: %f, t_start: %f, remaining_dist: %f, maxt: %f", t_end, t_start, remaining_dist, maxt);
-        Log(Debug, "start_voxel: %f, end_voxel: %f, grid_res", start_voxel, end_voxel, m_grid_res);
-        Log(Debug, "grid_start: %f, next_voxel_pos: %f, is_valid_dir: %f", grid_start, next_voxel_pos, is_valid_dir);
-        Log(Debug, "stride_f: %f, stride_x: %f, stride_y: %f, stride_z: %f,", stride_f, stride_x, stride_y, stride_z );
 
         Spectrum flux = emitted * throughput;
         flux *= m_apply_sample_scale ? sample_scale : Spectrum(1.f); 
@@ -251,8 +243,6 @@ public:
         while (loop(dr::detach(active))) {
 
             Float dt = dr::minimum(dr::min(dtmax), remaining_dist);
-            Log(Debug, "dt: %0.10d, remaining_dist: %0.10d", dtmax.z(), dt, remaining_dist);
-            Log(Debug, "dtmax.x: %0.10d, dtmax.y: %0.10d, dtmax.z: %0.10d", dtmax.x(),dtmax.y(),dtmax.z());
             dr::masked(remaining_dist, active) -= dt;
             
             // Check if we are at the end of the ray
@@ -264,22 +254,18 @@ public:
             // Retrieve the face and direction indices used to access the film
             UInt32 f = dr::sum(dr::select(mask, face_index, 0));
             UInt32 d = dr::sum(dr::maximum(dr::select(mask, step_dir, 0),0));
-            Log(Debug, "mask: %d, d: %d, f: %d", mask, d, f);
 
             // Because we are considering faces, we increment the voxel index by one in positive directions.
             Vector3i current_face = dr::select(mask && (step_dir > 0), current_voxel + 1, current_voxel);
-            Log(Debug, "current_voxel: %f, current_face: %f", current_voxel, current_face);
 
             UInt32 current_voxel_flat = d * stride_d 
                                        + current_face.x() * stride_x
                                        + current_face.y() * stride_y
                                        + current_face.z() * stride_z
                                        + f * stride_f;
-            Log(Debug, "flat_idx: %f", current_voxel_flat);
             // ====== Write to film ======
             if constexpr (!is_polarized_v<Spectrum>){
                 Float cos_theta = dr::sum(dr::select(mask, dr::abs(ray.d), 0));
-                Log(Debug, "flux: %f, cos_theta : %f", flux, cos_theta);
                 
                 m_film->write_tensor(
                     dr::select(m_surface_flux, flux[0]*cos_theta, flux[0]), 
@@ -295,7 +281,8 @@ public:
             dtmax = dr::select(mask, tstep, dtmax - dt);
             Vector3i voxel_update = dr::select(mask, step_dir, 0);
             dr::masked(current_voxel, active) += voxel_update;
-
+            // @Ponder: I'm unsure this would have the intended effect in vectorized mode
+            // since we cannot control which axis is reduced yet.
             active &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
         }
     };

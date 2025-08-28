@@ -129,6 +129,8 @@ public:
             // Calculate index of current voxel from the interaction point
             Vector3f p = dr::select(si.t < mei.t, si.p, mei.p);
             Vector3i current_voxel = Vector3i(dr::floor((p - m_bbox.min) / m_voxel_size));
+            // @Ponder: I'm unsure this would have the intended effect in vectorized mode
+            // since we cannot control which axis is reduced yet.
             accumulate &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
             Float current_voxel_flat = current_voxel.x() 
             + current_voxel.y() * m_grid_res.x() 
