@@ -236,7 +236,6 @@ public:
         Spectrum flux = emitted * throughput;
         flux *= m_apply_sample_scale ? sample_scale : Spectrum(1.f); 
 
-        // TODO write loop.
         dr::Loop<Mask> loop("DDA");
         loop.put(active, dtmax, remaining_dist, current_voxel);
         loop.init();
