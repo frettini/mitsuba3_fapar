@@ -135,7 +135,7 @@ public:
 
         m_needs_sample_3 = false;
 
-        m_flags      = EmitterFlags::Infinite | EmitterFlags::DeltaDirection;
+        m_flags      = +EmitterFlags::Infinite | +EmitterFlags::DeltaDirection;
         dr::set_attr(this, "flags", m_flags);
     }
 
@@ -233,6 +233,7 @@ public:
         std::ostringstream oss;
         oss << "DirectionalPeriodicEmitter[" << std::endl
             << "  irradiance = " << string::indent(m_irradiance) << ","
+            << "  pbox = " << string::indent(m_pbox) << ","
             << std::endl
             << "]";
         return oss.str();
