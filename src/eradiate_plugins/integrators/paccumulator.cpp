@@ -69,33 +69,21 @@ wavefront mode.
 .. tabs::
     .. code-tab::  xml
 
-        <shape type="cube" id="periodic_bound">
-            <transform name="to_world">
-                <scale value="12.51 12.51 1.10"/>
-            </transform>    
-            <bsdf type="null"/>
-        </shape>
-
         <integrator type="paccumulator">
+            <integer name="min_depth" value="1"/>
             <integer name="max_depth" value="8"/>
-            <ref name="periodic_box" id="periodic_bound"/>
+            <vector name="pbox_min" value="-1.0, -1.0, -1.0"/>
+            <vector name="pbox_max" value=" 1.0,  1.0,  1.0"/>
         </integrator>
 
     .. code-tab:: python
 
-        'periodic_cube':{
-            'type':'cube',
-            'id':'periodic_cube',
-            'material':{'type':'null'},
-        },
-
         'integrator':{
             'type': 'paccumulator',
+            'max_depth': 1,
             'max_depth': 8,
-            'periodic_box':{
-                'type':'ref',
-                'id':'periodic_cube',
-            }
+            'pbox_min': [-1.,-1.,-1.],
+            'pbox_max': [ 1., 1., 1.],
         }
 
  */
