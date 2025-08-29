@@ -58,17 +58,11 @@ i.e. :math:`(0, 0, 1)`.
     .. code-tab:: xml
         :name: directionalperiodic-light
 
-        <shape type="cube" id="periodic_bound">
-            <transform name="to_world">
-                <scale value="12.51 12.51 1.10"/>
-            </transform>    
-            <bsdf type="null"/>
-        </shape>
-
         <emitter type="directionalperiodic">
             <vector name="direction" value="0.0, 0.0, -1.0"/>
             <rgb name="irradiance" value="1.0"/>
-            <ref name="periodic_box" id="periodic_bound"/>
+            <vector name="pbox_min" value="-1.0, -1.0, -1.0"/>
+            <vector name="pbox_max" value=" 1.0,  1.0,  1.0"/>
         </emitter>
 
     .. code-tab:: python
@@ -86,10 +80,8 @@ i.e. :math:`(0, 0, 1)`.
                 'type': 'rgb',
                 'value': 1.0,
             }
-            'periodic_box':{
-                'type':'ref',
-                'id':'periodic_cube'
-            }
+            'pbox_min': [-1.,-1.,-1.],
+            'pbox_max': [ 1., 1., 1.],
         }
 
 */
