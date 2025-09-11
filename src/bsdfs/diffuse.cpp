@@ -97,7 +97,6 @@ public:
     void traverse(TraversalCallback *callback) override {
         Base::traverse(callback);
         callback->put_object("reflectance", m_reflectance.get(), +ParamFlags::Differentiable);
-        callback->put_parameter("filter", m_filter, +ParamFlags::NonDifferentiable);
     }
 
     std::pair<BSDFSample3f, Spectrum> sample(const BSDFContext &ctx,

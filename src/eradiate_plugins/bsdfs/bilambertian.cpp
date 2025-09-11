@@ -214,7 +214,6 @@ public:
         Base::traverse(callback);
         callback->put_object("reflectance", m_reflectance.get(), +ParamFlags::Differentiable);
         callback->put_object("transmittance", m_transmittance.get(), +ParamFlags::Differentiable);
-        callback->put_parameter("filter", m_filter, +ParamFlags::NonDifferentiable);
     }
 
     std::string to_string() const override {

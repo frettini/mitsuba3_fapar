@@ -608,6 +608,8 @@ public:
     //! @}
     // -----------------------------------------------------------------------
 
+    void traverse(TraversalCallback *callback) override;
+    
     DRJIT_VCALL_REGISTER(Float, mitsuba::BSDF)
 
     MI_DECLARE_CLASS()

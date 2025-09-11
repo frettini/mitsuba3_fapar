@@ -15,6 +15,11 @@ MI_VARIANT BSDF<Float, Spectrum>::BSDF(const Properties &props)
 
 MI_VARIANT BSDF<Float, Spectrum>::~BSDF() { }
 
+MI_VARIANT 
+void BSDF<Float, Spectrum>::traverse(TraversalCallback *callback) {
+    callback->put_parameter("filter", m_filter, +ParamFlags::NonDifferentiable );
+}
+
 MI_VARIANT std::pair<Spectrum, Float>
 BSDF<Float, Spectrum>::eval_pdf(const BSDFContext &ctx,
                                 const SurfaceInteraction3f &si,
