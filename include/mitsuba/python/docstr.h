@@ -446,7 +446,7 @@ static const char *__doc_mitsuba_BSDFSample3_sampled_type = R"doc(Stores the com
 
 static const char *__doc_mitsuba_BSDFSample3_wo = R"doc(Normalized outgoing direction in local coordinates)doc";
 
-static const char *__doc_mitsuba_BSDF_BSDF = R"doc(//! @})doc";
+static const char *__doc_mitsuba_BSDF_BSDF = R"doc()doc";
 
 static const char *__doc_mitsuba_BSDF_class = R"doc()doc";
 
@@ -732,6 +732,8 @@ zero spectrum indicates that sampling failed.)doc";
 static const char *__doc_mitsuba_BSDF_set_id = R"doc(Set a string identifier)doc";
 
 static const char *__doc_mitsuba_BSDF_to_string = R"doc(Return a human-readable representation of the BSDF)doc";
+
+static const char *__doc_mitsuba_BSDF_traverse = R"doc(//! @})doc";
 
 static const char *__doc_mitsuba_Bitmap =
 R"doc(General-purpose bitmap class with read and write support for several

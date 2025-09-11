@@ -185,8 +185,9 @@ public:
         return m_reflectance->eval(si, active);
     }
 
-    Spectrum eval_hdrf(const SurfaceInteraction3f &si,
-        Mask active) const override {
+    Spectrum eval_hdrf(const BSDFContext & /* ctx */,
+                       const SurfaceInteraction3f &si,
+                       Mask active) const override {
         return m_reflectance->eval(si, active);
     }
 

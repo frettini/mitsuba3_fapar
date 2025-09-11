@@ -137,7 +137,9 @@ public:
 
             // Calculate absorption at intersection point
             BSDFPtr bsdf = si.bsdf();
-            Spectrum absorption = 1.0f - bsdf->eval_hdrf(si, active);
+            BSDFContext ctx;
+            
+            Spectrum absorption = 1.0f - bsdf->eval_hdrf(ctx, si, active);
             // Calculated the resulting absorbed flux
             Spectrum result = emitted * throughput * absorption;
 

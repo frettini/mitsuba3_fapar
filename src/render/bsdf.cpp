@@ -53,7 +53,8 @@ MI_VARIANT Spectrum BSDF<Float, Spectrum>::eval_diffuse_reflectance(
 }
 
 MI_VARIANT Spectrum BSDF<Float, Spectrum>::eval_hdrf(
-    const SurfaceInteraction3f &/* si */, Mask /* active */) const {
+    const BSDFContext & /* ctx */, const SurfaceInteraction3f & /* si */,
+    Mask /* active */) const {
     NotImplementedError("eval_hdrf");
 }
 

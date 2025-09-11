@@ -599,8 +599,9 @@ public:
      *     A surface interaction data structure describing the underlying
      *     surface position.
      */
-    virtual Spectrum eval_hdrf(const SurfaceInteraction3f &si,
-        Mask active = true) const;                                            
+    virtual Spectrum eval_hdrf(const BSDFContext &ctx,
+                               const SurfaceInteraction3f &si,
+                               Mask active = true) const;
 
     /// Return a human-readable representation of the BSDF
     std::string to_string() const override = 0;
