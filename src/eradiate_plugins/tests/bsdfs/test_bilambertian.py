@@ -84,6 +84,33 @@ def test_eval_pdf_vector(variant_llvm_ad_rgb, r, t, wi):
 @pytest.mark.parametrize(
     "r, t",
     [
+        (0.2, 0.4),
+        (0.4, 0.2),
+        (0.1, 0.9),
+        (0.9, 0.1),
+        (0.4, 0.6),
+        (0.6, 0.4),
+    ],
+)
+def test_eval_hdrf(variant_llvm_ad_rgb, r, t):
+    ctx = mi.BSDFContext()
+    bsdf = mi.load_dict({"type": "bilambertian", "reflectance": r, "transmittance": t})
+
+    si = mi.SurfaceInteraction3f()
+    si.p = [0, 0, 0]
+    si.n = [0, 0, 1]
+    si.wi = dr.normalize(mi.ScalarVector3f([0,0,1]))
+    si.sh_frame = mi.Frame3f(si.n)
+
+    v_eval = bsdf.eval_hdrf(ctx, si)
+    eval_expected = r+t
+    
+    assert dr.allclose(v_eval, eval_expected)
+
+
+@pytest.mark.parametrize(
+    "r, t",
+    [
         [0.6, 0.2],
         [0.2, 0.6],
         [0.6, 0.4],
