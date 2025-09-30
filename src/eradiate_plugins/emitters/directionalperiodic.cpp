@@ -168,7 +168,7 @@ public:
         auto [wavelengths, wav_weight] =
             sample_wavelengths(si, wavelength_sample, active);
 
-        Spectrum weight = wav_weight * extent.x() * extent.y();
+        Spectrum weight = wav_weight * extent.x() * extent.y() * dr::abs(Frame3f::cos_theta(d_global));
 
         return { Ray3f(origin, d_global, time, wavelengths),
                  depolarizer<Spectrum>(weight) };
