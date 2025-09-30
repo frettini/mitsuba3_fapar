@@ -421,6 +421,12 @@ public:
         }        
     }
 
+    void traverse(TraversalCallback *callback) override {
+        Base::traverse(callback);
+        callback->put_parameter("min_depth", m_min_depth, +ParamFlags::NonDifferentiable);
+        callback->put_parameter("max_depth", m_max_depth, +ParamFlags::NonDifferentiable);
+    }
+
     MI_INLINE
     Float index_spectrum(const UnpolarizedSpectrum &spec, const UInt32 &idx) const {
         Float m = spec[0];
@@ -504,7 +510,7 @@ public:
         // Initialize periodic bound variables
         // Mask pbounds_valid = dr::neq(m_periodic_box, nullptr);
         Mask pbounds_valid = m_pbox.valid() && dr::neq(m_pbox_shape.get(), nullptr);
-        UInt32 max_periodic_iterations = 10; // TODO: include with depth?
+        UInt32 max_periodic_iterations = 100; // TODO: include with depth?
         UInt32 periodic_count = 0;
 
         // Initialize filter variables
