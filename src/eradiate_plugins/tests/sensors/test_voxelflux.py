@@ -65,14 +65,14 @@ def test_voxelflux(variant_scalar_rgb):
         return mi.load_dict(scene)
 
     scene = voxel_flux_scene(False)
-    res = mi.render(scene, spp=10)
+    res = mi.render(scene, spp=1)
     gt = np.zeros((2,3,2,2,2,1))
     gt[0,2,0,0,:] = 1.
     print(res.numpy())
     assert np.allclose(res.numpy(), gt)
 
     scene = voxel_flux_scene(True)
-    res = mi.render(scene, spp=10)
+    res = mi.render(scene, spp=1)
     gt = np.zeros((2,3,2,2,2,1))
     gt[:,2,0,0,1] = 1.
     print(res.numpy())

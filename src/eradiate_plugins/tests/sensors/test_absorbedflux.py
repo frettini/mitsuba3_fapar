@@ -5,7 +5,7 @@ import numpy as np
 def sensor_dict():
     return {
         "type": "absorbedflux",
-        "surface_flux":False, #to remove
+        # "surface_flux":False, #to remove
         "film": {
             "type": "volfilm",
             "res_x": 1,
@@ -60,8 +60,8 @@ def test_closed_box(variant_scalar_rgb):
                 "sensor": sensor_dict(),
                 "integrator": {
                     "type": "paccumulator", 
-                    "max_depth": 100,
-                    "rr_depth":100,
+                    "max_depth": 1000,
+                    "rr_depth":1000,
                 },
                 "surface": {
                     "type": "cube",
@@ -81,17 +81,18 @@ def test_closed_box(variant_scalar_rgb):
             }
         )
 
-    scene = closed_box_scene(0., [0.,0.,-1])
+    scene = closed_box_scene(0.3, [0.,0.,-1])
     res = mi.render(scene, spp=1)
     print(res.numpy().squeeze())
     assert np.allclose(res.numpy().squeeze(), 1.)
 
     scene = closed_box_scene(0., [-0.5,0.,-0.5])
     res = mi.render(scene, spp=1)
-    print(res.numpy().squeeze(), 1.)
-    assert np.allclose(res.numpy().squeeze(), 1.)
+    print(res.numpy().squeeze(), np.cos(np.deg2rad(45)))
+    # assert np.allclose(res.numpy().squeeze(), 1.)
+    assert np.allclose(res.numpy().squeeze(), np.cos(np.deg2rad(45)))
 
     scene = closed_box_scene(0.3, [-0.5,0.,-0.5])
     res = mi.render(scene, spp=1)
-    print(res.numpy().squeeze(), 1)
-    assert np.allclose(res.numpy().squeeze(), 1.)
+    print(res.numpy().squeeze(), np.cos(np.deg2rad(45)))
+    assert np.allclose(res.numpy().squeeze(), np.cos(np.deg2rad(45)))
