@@ -250,32 +250,33 @@ public:
 
             auto mask = dr::abs(dtmax - dt) <= 1e-6;
 
+            //----------------------------------------
             // Retrieve the face and direction indices used to access the film
-            UInt32 f = dr::sum(dr::select(mask, face_index, 0));
-            UInt32 d = dr::sum(dr::maximum(dr::select(mask, step_dir, 0),0));
-
-            // Because we are considering faces, we increment the voxel index by one in positive directions.
-            Vector3i current_face = dr::select(mask && (step_dir > 0), current_voxel + 1, current_voxel);
-
-            UInt32 current_voxel_flat = d * stride_d 
-                                       + current_face.x() * stride_x
-                                       + current_face.y() * stride_y
-                                       + current_face.z() * stride_z
-                                       + f * stride_f;
-            // ====== Write to film ======
-            if constexpr (!is_polarized_v<Spectrum>){
-                Float cos_theta = dr::sum(dr::select(mask, dr::abs(ray.d), 0));
+            for( size_t i = 0 ; i < 3; ++i) {
+                Mask active_step = mask[i];
+                UInt32 f = dr::select(active_step , face_index[i], 0);
+                UInt32 d = dr::maximum(dr::select(active_step , step_dir[i], 0),0);
+                Vector3i current_face = current_voxel;
+                current_face[i] = dr::select(active_step && (step_dir[i] > 0), current_voxel[i] + 1, current_voxel[i]);
                 
-                m_film->write_tensor(
-                    dr::select(m_surface_flux, flux[0]*cos_theta, flux[0]), 
-                    current_voxel_flat, 
-                    active && filter
-                );
+                UInt32 current_voxel_flat = current_face.z()
+                                       + current_face.y() * stride_y
+                                       + current_face.x() * stride_x
+                                       + f * stride_f
+                                       + d * stride_d;
+                // ====== Write to film ======
+                if constexpr (!is_polarized_v<Spectrum>){
+                    Float cos_theta = dr::select(active_step, dr::abs(ray.d[i]), 1.);
+                    m_film->write_tensor(
+                        dr::select(m_surface_flux, flux[0]*cos_theta, flux[0]), 
+                        current_voxel_flat, 
+                        active_step && filter
+                    );
+                }
+                
             }
-            // ===========================
-
             active &= dr::any(dr::neq(end_voxel, current_voxel)) && (remaining_dist > 1e-6);
-
+            
             // Update the voxel index by stepping in the axis closest to the current point.
             dtmax = dr::select(mask, tstep, dtmax - dt);
             Vector3i voxel_update = dr::select(mask, step_dir, 0);
