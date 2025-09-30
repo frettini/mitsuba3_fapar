@@ -68,9 +68,9 @@ public:
 
         m_n_channels = 1;
         size_t shape[4] = { 
-            (size_t) m_res.z(), 
-            (size_t) m_res.y(), 
             (size_t) m_res.x(), 
+            (size_t) m_res.y(), 
+            (size_t) m_res.z(), 
             m_n_channels
         };
 
@@ -125,9 +125,9 @@ public:
         FloatX zeros = dr::zeros<FloatX>(data_size);
         m_n_channels = 1;
         size_t shape[4] = { 
-            (size_t) m_res.z(), 
-            (size_t) m_res.y(), 
             (size_t) m_res.x(), 
+            (size_t) m_res.y(), 
+            (size_t) m_res.z(), 
             m_n_channels
         };
         m_data = TensorXf(zeros.data(), 4, shape);

@@ -131,9 +131,10 @@ public:
             // @Ponder: I'm unsure this would have the intended effect in vectorized mode
             // since we cannot control which axis is reduced yet.
             accumulate &= dr::all(current_voxel >= 0) && dr::all(current_voxel < m_grid_res);
-            Float current_voxel_flat = current_voxel.x() 
-                                    + current_voxel.y() * m_grid_res.x() 
-                                    + current_voxel.z() * m_grid_res.x() * m_grid_res.y();
+            // Currently assuming that number of channels is always equal to one.
+            Float current_voxel_flat = current_voxel.z()
+                                       + current_voxel.y() * m_grid_res.z()
+                                       + current_voxel.x() * m_grid_res.z() * m_grid_res.y();
 
             // Calculate absorption at intersection point
             BSDFPtr bsdf = si.bsdf();
