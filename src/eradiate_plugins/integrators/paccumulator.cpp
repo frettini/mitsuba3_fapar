@@ -9,6 +9,7 @@
 #include <mitsuba/render/filter.h>
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/phase.h>
+#include <nanothread/nanothread.h>
 
 NAMESPACE_BEGIN(mitsuba)
 

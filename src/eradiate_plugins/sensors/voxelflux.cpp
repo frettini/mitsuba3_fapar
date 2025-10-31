@@ -105,7 +105,7 @@ public:
                   "placed in the scene.");
         }
 
-        if(props.has_property("bbox_min") && props.has_property("bbox_min")){
+        if(props.has_property("bbox_min") && props.has_property("bbox_max")){
             ScalarPoint3f bbox_min = props.get<ScalarPoint3f>("bbox_min");
             ScalarPoint3f bbox_max = props.get<ScalarPoint3f>("bbox_max");
             m_bbox = ScalarBoundingBox3f(bbox_min, bbox_max);
