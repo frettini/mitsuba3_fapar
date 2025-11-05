@@ -6,6 +6,8 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/integrator.h>
 
+#include <mitsuba/render/instancelist.h>
+
 #if defined(MI_ENABLE_EMBREE)
 #  include "scene_embree.inl"
 #else
@@ -27,6 +29,7 @@ MI_VARIANT Scene<Float, Spectrum>::Scene(const Properties &props) {
         Emitter *emitter       = dynamic_cast<Emitter *>(v.get());
         Sensor *sensor         = dynamic_cast<Sensor *>(v.get());
         Integrator *integrator = dynamic_cast<Integrator *>(v.get());
+        InstanceList *instance_list = dynamic_cast<InstanceList *>(v.get());
 
         if (!scene)
             m_children.push_back(v.get());
@@ -44,6 +47,10 @@ MI_VARIANT Scene<Float, Spectrum>::Scene(const Properties &props) {
             }
             if (mesh)
                 mesh->set_scene(this);
+        } else if (instance_list) {
+            m_bbox.expand(instance_list->bbox());
+            auto shape_list = instance_list->shapes();
+            m_shapes.insert(std::end(m_shapes), std::begin(shape_list), std::end(shape_list));
         } else if (emitter) {
             // Surface emitters will be added to the list when attached to a shape
             if (!has_flag(emitter->flags(), EmitterFlags::Surface))

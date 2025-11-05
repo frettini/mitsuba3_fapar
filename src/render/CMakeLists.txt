@@ -57,6 +57,7 @@ add_library(mitsuba-render OBJECT
                    ${INC_DIR}/fresnel.h
                    ${INC_DIR}/filter.h
   imageblock.cpp   ${INC_DIR}/imageblock.h
+  instancelist.cpp ${INC_DIR}/instancelist.h
   integrator.cpp   ${INC_DIR}/integrator.h
                    ${INC_DIR}/interaction.h
   medium.cpp       ${INC_DIR}/medium.h

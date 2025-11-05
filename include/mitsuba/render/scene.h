@@ -38,7 +38,7 @@ class MI_EXPORT_LIB Scene : public Object {
 public:
     MI_IMPORT_TYPES(BSDF, Emitter, EmitterPtr, SensorPtr, Film, Sampler, Shape,
                     ShapePtr, ShapeGroup, Sensor, Integrator, Medium, MediumPtr,
-                    Mesh)
+                    Mesh, InstanceList)
 
     /// Instantiate a scene from a \ref Properties object
     Scene(const Properties &props);
